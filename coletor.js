@@ -4,6 +4,8 @@
 // mais servidor local. O payload de 40 MB nunca sai da aba: so o resultado
 // (alguns KB) vai para o service worker, que o guarda para o painel.
 const AGENTE = "cvc_";
+// Com quem a CVC e comparada: localizada pelo nome ou id do agente.
+const RIVAL = { nome: "Decolar", re: /decolar/i };
 // Reconhece o site ao entrar (Skyscanner ou Kayak). O payload e o mesmo nos
 // dois; o site so muda a leitura da rota na URL e o rotulo no painel.
 const SITE = CVC.siteDaUrl(location.href);
@@ -209,7 +211,7 @@ async function fecha() {
   const meuCfg = cfg, meusPayloads = payloads, meuT0 = t0, meuCompletou = completou;
   cfg = null; payloads = []; t0 = null; completou = false;
 
-  const res = CVC.contaPorCia(meusPayloads, AGENTE);
+  const res = CVC.contaPorCia(meusPayloads, AGENTE, RIVAL);
   res.posicoes = CVC.posicoesDoAgente(meusPayloads, AGENTE);
 
   const routes = CVC.rotasDoLog(meuCfg.origem, meuCfg.destino, meuCfg.ida, meuCfg.volta);
@@ -268,9 +270,14 @@ async function fecha() {
     por_cia: res.por_cia,
     posicoes: res.posicoes,
     combinadas: res.combinadas,
-    menor_concorrente: res.menor_concorrente,
-    concorrentes: res.concorrentes,
     menor_agente: res.menor_agente,
+    rival: res.rival,
+    rival_nome: res.rival_nome,
+    rival_participa_da_busca: res.rival_participa_da_busca,
+    itinerarios_do_rival: res.itinerarios_do_rival,
+    menor_rival: res.menor_rival,
+    delta_rival: res.delta_rival,
+    frente_a_frente: res.frente_a_frente,
     outras_fontes: outras,
     fontes_timeout: outrasTimeout,
     kibana: usado ? CVC.urlKibana(usado) : null,

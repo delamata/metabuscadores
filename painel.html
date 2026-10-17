@@ -8,7 +8,7 @@
   :root {
     --tinta: #111827; --suave: #4b5563; --fraco: #9ca3af; --linha: #e5e7eb;
     --fundo: #f6f7f9; --cartao: #ffffff;
-    --azul: #2563eb; --sky: #0770e3; --kayak: #ff690f;
+    --azul: #2563eb; --sky: #0770e3; --kayak: #ff690f; --cvc: #1d4ed8; --decolar: #7c3aed;
     --bom: #15803d; --bom-f: #dcfce7; --ruim: #b91c1c; --ruim-f: #fee2e2;
     --alerta: #92400e; --alerta-f: #fef3c7; --barra: #e5e7eb;
   }
@@ -47,10 +47,21 @@
   h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
        color: var(--fraco); margin: 22px 0 0; }
 
-  .destaque .quem { font-size: 17px; font-weight: 700; margin-top: 4px; }
-  .destaque .preco { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
-  .comparo { display: flex; justify-content: space-between; align-items: baseline;
-             margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linha); }
+  .duelo { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+  .lado { border-radius: 10px; padding: 10px; text-align: center; background: var(--fundo); }
+  .lado.cvc { box-shadow: inset 0 3px 0 var(--cvc); }
+  .lado.rival { box-shadow: inset 0 3px 0 var(--decolar); }
+  .lado .rotulo { font-size: 12px; color: var(--suave); }
+  .lado .preco { font-size: clamp(15px, 5.6vw, 22px); font-weight: 800; letter-spacing: -.02em; margin-top: 2px;
+                 white-space: nowrap; }
+  .lado .nota { font-size: 11px; color: var(--fraco); }
+  .vs { font-size: 11px; font-weight: 700; color: var(--fraco); text-transform: uppercase; }
+  .veredito { margin-top: 10px; padding: 8px 10px; border-radius: 10px; text-align: center;
+              font-size: 14px; font-weight: 700; }
+  .veredito.bom { color: var(--bom); background: var(--bom-f); }
+  .veredito.ruim { color: var(--ruim); background: var(--ruim-f); }
+  .veredito.empate { color: var(--suave); background: var(--fundo); }
+  .frente { margin-top: 8px; font-size: 12px; color: var(--suave); text-align: center; }
   .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
   .tag.bom { color: var(--bom); background: var(--bom-f); }
   .tag.ruim { color: var(--ruim); background: var(--ruim-f); }

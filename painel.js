@@ -15,12 +15,6 @@ const dia = (iso) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
   return m ? `${m[3]}/${m[2]}` : esc(iso);
 };
-// "Decolar, MaxMilhas e mais 2"
-const quem = (lista) => {
-  if (!lista || !lista.length) return "—";
-  const nomes = lista.slice(0, 2).map(esc).join(", ");
-  return lista.length > 2 ? `${nomes} e mais ${lista.length - 2}` : nomes;
-};
 
 // ---- blocos ---------------------------------------------------------------- #
 function topo(e) {
@@ -75,28 +69,39 @@ function coletando(e) {
   return topo(e) + cabecalhoRota(e.cfg, status("vivo", fase));
 }
 
-// O cartao principal: quem trouxe o menor preco e como a CVC ficou.
+// O cartao principal: menor preco da CVC x menor preco da Decolar, lado a
+// lado, e a diferenca entre os dois.
+function veredito(d, rival) {
+  if (d == null) return "";
+  if (Math.abs(d) < 0.05) return `<div class="veredito empate">CVC e ${esc(rival)} empatam</div>`;
+  const quanto = dif(Math.abs(d)).replace("+", "");
+  return d < 0
+    ? `<div class="veredito bom">CVC ${quanto} mais barata que a ${esc(rival)}</div>`
+    : `<div class="veredito ruim">CVC ${quanto} mais cara que a ${esc(rival)}</div>`;
+}
+
 function destaque(e) {
-  if (e.menor_concorrente == null) {
-    return `<div class="cartao destaque"><div class="rotulo">Menor preço de concorrente</div>
-      <div class="quem">Nenhum concorrente nesta busca</div>
-      ${e.menor_agente != null ? `<div class="suave">CVC a partir de ${brl(e.menor_agente)}</div>` : ""}
-    </div>`;
-  }
-  let comparo = `<div class="comparo"><span class="suave">CVC</span>
-    <span class="fraco">sem oferta nesta busca</span></div>`;
-  if (e.menor_agente != null) {
-    const d = (e.menor_agente - e.menor_concorrente) / e.menor_concorrente * 100;
-    const tag = d <= 0
-      ? `<span class="tag bom">${d === 0 ? "empata" : dif(d)} · CVC na frente</span>`
-      : `<span class="tag ruim">${dif(d)}</span>`;
-    comparo = `<div class="comparo"><span>Menor CVC <b>${brl(e.menor_agente)}</b></span>${tag}</div>`;
-  }
+  const rival = e.rival || "Decolar";
+  const lado = (classe, nome, valor, nota) => `<div class="lado ${classe}">
+      <div class="rotulo">${esc(nome)}</div>
+      <div class="preco">${valor == null ? "—" : brl(valor)}</div>
+      <div class="nota">${nota}</div></div>`;
+  const f = e.frente_a_frente || { cvc: 0, rival: 0, empate: 0 };
+  const disputados = f.cvc + f.rival + f.empate;
+  const frente = disputados
+    ? `<div class="frente">Nos ${disputados} voo(s) que as duas vendem:
+       CVC mais barata em <b>${f.cvc}</b> · ${esc(rival)} em <b>${f.rival}</b>
+       ${f.empate ? `· empate em <b>${f.empate}</b>` : ""}</div>` : "";
   return `<div class="cartao destaque">
-    <div class="rotulo">Menor preço de concorrente</div>
-    <div class="quem">${quem(e.concorrentes)}</div>
-    <div class="preco">${brl(e.menor_concorrente)}</div>
-    ${comparo}
+    <div class="duelo">
+      ${lado("cvc", "CVC", e.menor_agente,
+        e.menor_agente == null ? "sem oferta nesta busca" : `${e.itinerarios_do_agente} voo(s)`)}
+      <div class="vs">vs</div>
+      ${lado("rival", rival, e.menor_rival,
+        e.rival_participa_da_busca ? `${e.itinerarios_do_rival} voo(s)` : "não está nesta busca")}
+    </div>
+    ${veredito(e.delta_rival, rival)}
+    ${frente}
   </div>`;
 }
 
@@ -118,21 +123,16 @@ function seloTempo(l) {
   return "";
 }
 
-function cia(l) {
-  let difer = "";
-  if (l.delta_concorrente != null) {
-    const d = l.delta_concorrente;
-    difer = ` <span class="tag ${d <= 0 ? "bom" : "ruim"}">${dif(d)}</span>`;
-  }
+function cia(l, rival) {
+  const difer = l.delta_rival == null ? ""
+    : ` <span class="tag ${l.delta_rival <= 0 ? "bom" : "ruim"}">${dif(l.delta_rival)}</span>`;
   return `<div class="cia">
     <div class="cia-topo"><span class="cia-nome">${esc(l.cia)}</span>${seloTempo(l)}</div>
     <div class="cia-grade">
       <div><div class="rotulo">CVC</div><div class="valor">${brl(l.menor_agente)}${difer}</div></div>
-      <div><div class="rotulo">Menor concorrente</div>
-        <div class="valor">${brl(l.menor_concorrente)}
-        ${l.concorrentes.length ? `<br><small>${quem(l.concorrentes)}</small>` : ""}</div></div>
+      <div><div class="rotulo">${esc(rival)}</div><div class="valor">${brl(l.menor_rival)}</div></div>
     </div>
-    <div class="cobertura"><span>${l.voos_agente} de ${l.voos_busca} voos</span>
+    <div class="cobertura"><span>CVC em ${l.voos_agente} de ${l.voos_busca} voos</span>
       <span class="barra"><i style="width:${(l.cobertura * 100).toFixed(0)}%"></i></span>
       <span>${pct(l.cobertura)}</span></div>
   </div>`;
@@ -198,6 +198,8 @@ function pronto(e) {
   const avisos = [];
   if (!e.busca_completou)
     avisos.push("A busca não chegou a completar — os números podem estar incompletos.");
+  if (!e.rival_participa_da_busca)
+    avisos.push(`A ${e.rival || "Decolar"} não aparece entre as agências desta busca.`);
   if (!e.agente_participa_da_busca)
     avisos.push(`O agente ${e.agente} não aparece entre os agentes desta busca.`);
   return topo(e)
@@ -206,7 +208,7 @@ function pronto(e) {
     + destaque(e)
     + kpis(e)
     + `<h2>Por companhia</h2><div class="cartao">${
-        (e.por_cia || []).map(cia).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
+        (e.por_cia || []).map((l) => cia(l, e.rival || "Decolar")).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
     + posicoes(e.posicoes)
     + combinadas(e.combinadas)
     + `<h2>Detalhes</h2>` + log(e);

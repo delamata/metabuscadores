@@ -101,32 +101,49 @@ test("routes do log", () => {
   assert.equal(CVC.rotasDoLog("SAO", "RIO", "2026-09-17", null), "SAO,RIO,2026-09-17");
 });
 
-test("concorrente que trouxe o menor preco (geral e por companhia, com empate)", () => {
+const DECOLAR = { nome: "Decolar", re: /decolar/i };
+
+test("CVC x Decolar: menor preco de cada, % de diferenca e frente a frente", () => {
   const pl = {
     itineraries: {
       context: { status: "complete" },
-      agents: [{ id: "cvc_", name: "CVC" }, { id: "dec", name: "Decolar" }, { id: "mm", name: "MaxMilhas" }],
+      agents: [{ id: "cvc_", name: "CVC" }, { id: "decb", name: "Decolar" }, { id: "mm", name: "MaxMilhas" }],
       results: [
-        itin("a", ["Azul"], [[["cvc_"], 500], [["dec"], 470], [["mm"], 470]]),
-        itin("b", ["GOL Linhas Aéreas"], [[["cvc_", "dec"], 300], [["mm"], 320]]),
-        itin("c", ["LATAM Airlines"], [[["cvc_"], 900]]),   // so a CVC vende
+        itin("a", ["Azul"], [[["cvc_"], 500], [["decb"], 470], [["mm"], 300]]),   // Decolar ganha
+        itin("b", ["GOL Linhas Aéreas"], [[["cvc_"], 400], [["decb"], 450]]),     // CVC ganha
+        itin("c", ["GOL Linhas Aéreas"], [[["cvc_", "decb"], 600]]),              // empate
+        itin("d", ["LATAM Airlines"], [[["cvc_"], 900]]),                         // so a CVC
       ],
     },
   };
-  const r = CVC.contaPorCia([pl], "cvc_");
-  assert.equal(r.menor_concorrente, 300);
-  assert.deepEqual(r.concorrentes, ["Decolar"]);   // opcao dividida com a CVC conta para o outro
-  assert.equal(r.menor_agente, 300);
+  const r = CVC.contaPorCia([pl], "cvc_", DECOLAR);
+  assert.equal(r.rival_participa_da_busca, true);
+  assert.equal(r.rival_nome, "Decolar");
+  assert.equal(r.menor_agente, 400);
+  assert.equal(r.menor_rival, 450);
+  assert.ok(Math.abs(r.delta_rival - (-50 / 450 * 100)) < 1e-9);   // CVC 11,1% mais barata
+  assert.equal(r.itinerarios_do_rival, 3);
+  assert.deepEqual(r.frente_a_frente, { cvc: 1, rival: 1, empate: 1 });
   const azul = r.por_cia.find((l) => l.cia === "Azul");
-  assert.equal(azul.menor_concorrente, 470);
-  assert.deepEqual(azul.concorrentes, ["Decolar", "MaxMilhas"]);
-  assert.ok(Math.abs(azul.delta_concorrente - (30 / 470 * 100)) < 1e-9);
-  // numeros antigos intactos
-  assert.equal(azul.menor_busca, 470);
+  assert.equal(azul.menor_rival, 470);
+  assert.ok(Math.abs(azul.delta_rival - (30 / 470 * 100)) < 1e-9);
   const latam = r.por_cia.find((l) => l.cia === "LATAM Airlines");
-  assert.equal(latam.menor_concorrente, null);
-  assert.deepEqual(latam.concorrentes, []);
-  assert.equal(latam.delta_concorrente, null);
+  assert.equal(latam.menor_rival, null);
+  assert.equal(latam.delta_rival, null);
+  // numeros antigos intactos (MaxMilhas mais barata nao mexe na comparacao)
+  assert.equal(azul.menor_busca, 300);
+  assert.equal(r.itinerarios_do_agente, 4);
+});
+
+test("Decolar ausente da busca", () => {
+  const pl = { itineraries: { context: { status: "complete" }, agents: [{ id: "cvc_", name: "CVC" }],
+    results: [itin("a", ["Azul"], [[["cvc_"], 500]])] } };
+  const r = CVC.contaPorCia([pl], "cvc_", DECOLAR);
+  assert.equal(r.rival_participa_da_busca, false);
+  assert.equal(r.menor_rival, null);
+  assert.equal(r.delta_rival, null);
+  // sem rival informado, a analise antiga segue igual
+  assert.equal(CVC.contaPorCia([pl], "cvc_").rival, null);
 });
 
 // Formato do poll do Kayak (/i/api/search/dynamic/flights/poll), reduzido.
@@ -166,16 +183,19 @@ test("Kayak: traduz o poll para o formato da analise", () => {
   assert.ok(it.agents.some((a) => a.id === "cvc_" && a.name === "CVC Viagens"));
 });
 
-test("Kayak: analise completa reconhece a CVC e o concorrente mais barato", () => {
-  const r = CVC.contaPorCia([CVC.doKayak(kayak())], "cvc_");
+test("Kayak: analise completa reconhece a CVC e a Decolar pelo nome", () => {
+  const pl = kayak();
+  pl.results[1].bookingOptions.push(
+    { providerInfo: { code: "DECOLARBR", displayName: "Decolar" }, displayPrice: { price: 1675 } });
+  const r = CVC.contaPorCia([CVC.doKayak(pl)], "cvc_", DECOLAR);
   assert.equal(r.agente_participa_da_busca, true);
   assert.equal(r.agente_nome, "CVC Viagens");
   assert.equal(r.itinerarios_do_agente, 1);
-  assert.equal(r.menor_concorrente, 1590);
-  assert.deepEqual(r.concorrentes, ["VaidePromo"]);
-  const azul = r.por_cia.find((l) => l.cia === "Azul");
-  assert.equal(azul.menor_agente, 1787);
-  assert.equal(azul.menor_concorrente, 1590);
+  assert.equal(r.rival_nome, "Decolar");
+  assert.equal(r.menor_agente, 1787);
+  assert.equal(r.menor_rival, 1675);                     // a mais barata das duas ofertas da Decolar
+  assert.ok(Math.abs(r.delta_rival - (112 / 1675 * 100)) < 1e-9);
+  assert.deepEqual(r.frente_a_frente, { cvc: 0, rival: 1, empate: 0 });
 });
 
 test("Kayak: corpo sem resultados de preco nao vira dado", () => {
