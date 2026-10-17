@@ -92,26 +92,66 @@ function destaque(e) {
     ? `<div class="frente">Nos ${disputados} voo(s) que as duas vendem:
        CVC mais barata em <b>${f.cvc}</b> · ${esc(rival)} em <b>${f.rival}</b>
        ${f.empate ? `· empate em <b>${f.empate}</b>` : ""}</div>` : "";
+  const total = e.total_itinerarios || 0;
+  const nota = (n, presente) => (!presente ? "não está nesta busca"
+    : `${n} voo${n === 1 ? "" : "s"} · ${total ? pct(n / total) : "—"}`);
   return `<div class="cartao destaque">
     <div class="duelo">
-      ${lado("cvc", "CVC", e.menor_agente,
-        e.menor_agente == null ? "sem oferta nesta busca" : `${e.itinerarios_do_agente} voo(s)`)}
+      ${lado("cvc", "CVC", e.menor_agente, nota(e.itinerarios_do_agente, e.menor_agente != null))}
       <div class="vs">vs</div>
-      ${lado("rival", rival, e.menor_rival,
-        e.rival_participa_da_busca ? `${e.itinerarios_do_rival} voo(s)` : "não está nesta busca")}
+      ${lado("rival", rival, e.menor_rival, nota(e.itinerarios_do_rival, e.rival_participa_da_busca))}
     </div>
     ${veredito(e.delta_rival, rival)}
     ${frente}
+  </div>
+  ${cobertura(e, rival)}`;
+}
+
+// Cobertura: em quantos dos voos da busca cada uma tem oferta.
+function barraDupla(cvcN, rivN, total, rival) {
+  const larg = (n) => (total ? (n / total * 100).toFixed(1) : 0);
+  return `<div class="duas">
+    <div class="linha-barra"><span class="marca cvc">CVC</span>
+      <span class="barra"><i class="cvc" style="width:${larg(cvcN)}%"></i></span>
+      <b>${total ? pct(cvcN / total) : "—"}</b></div>
+    <div class="linha-barra"><span class="marca rival">${esc(rival)}</span>
+      <span class="barra"><i class="rival" style="width:${larg(rivN)}%"></i></span>
+      <b>${total ? pct(rivN / total) : "—"}</b></div>
+  </div>`;
+}
+function cobertura(e, rival) {
+  const total = e.total_itinerarios || 0;
+  const cvcN = e.itinerarios_do_agente || 0, rivN = e.itinerarios_do_rival || 0;
+  let leitura = "";
+  if (total && (cvcN || rivN)) {
+    if (cvcN === rivN) leitura = "mesma cobertura";
+    else {
+      const maior = cvcN > rivN ? "CVC" : rival;
+      const vezes = Math.min(cvcN, rivN) ? (Math.max(cvcN, rivN) / Math.min(cvcN, rivN)) : null;
+      leitura = `${esc(maior)} tem ${Math.abs(cvcN - rivN)} voo(s) a mais`
+        + (vezes ? ` (${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}×)` : "");
+    }
+  }
+  return `<div class="cartao">
+    <div class="cobertura-topo"><span class="rotulo">Cobertura</span>
+      <span class="suave">de ${total} voos na busca</span></div>
+    ${barraDupla(cvcN, rivN, total, rival)}
+    <div class="numeros-cob">
+      <span><b>${cvcN}</b> voos CVC</span>
+      <span><b>${rivN}</b> voos ${esc(rival)}</span>
+    </div>
+    ${leitura ? `<div class="frente">${leitura}</div>` : ""}
   </div>`;
 }
 
 function kpis(e) {
-  const cob = e.total_itinerarios ? pct(e.itinerarios_do_agente / e.total_itinerarios) : "—";
   const pos = e.posicoes && e.posicoes.primeira != null ? `${e.posicoes.primeira}º` : "—";
+  const top10 = e.posicoes && e.posicoes.no_topo && e.posicoes.no_topo[10] != null
+    ? e.posicoes.no_topo[10] : "—";
   return `<div class="kpis">
-    <div class="kpi"><b>${e.itinerarios_do_agente}<span> /${e.total_itinerarios}</span></b><span>voos com CVC</span></div>
-    <div class="kpi"><b>${cob}</b><span>cobertura</span></div>
-    <div class="kpi"><b>${pos}</b><span>1ª posição</span></div>
+    <div class="kpi"><b>${e.total_itinerarios}</b><span>voos na busca</span></div>
+    <div class="kpi"><b>${pos}</b><span>1ª posição CVC</span></div>
+    <div class="kpi"><b>${top10}</b><span>CVC no top 10</span></div>
   </div>`;
 }
 
@@ -132,9 +172,10 @@ function cia(l, rival) {
       <div><div class="rotulo">CVC</div><div class="valor">${brl(l.menor_agente)}${difer}</div></div>
       <div><div class="rotulo">${esc(rival)}</div><div class="valor">${brl(l.menor_rival)}</div></div>
     </div>
-    <div class="cobertura"><span>CVC em ${l.voos_agente} de ${l.voos_busca} voos</span>
-      <span class="barra"><i style="width:${(l.cobertura * 100).toFixed(0)}%"></i></span>
-      <span>${pct(l.cobertura)}</span></div>
+    <div class="cia-cob"><span class="suave">Cobertura · ${l.voos_busca} voos</span>
+      ${barraDupla(l.voos_agente, l.voos_rival || 0, l.voos_busca, rival)}
+      <div class="numeros-cob"><span><b>${l.voos_agente}</b> CVC</span>
+        <span><b>${l.voos_rival || 0}</b> ${esc(rival)}</span></div></div>
   </div>`;
 }
 

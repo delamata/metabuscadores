@@ -43,11 +43,14 @@ mostra de qual site veio a busca.
    Decolar"). A % e sobre o preco da Decolar: `(CVC - Decolar) / Decolar`.
    Logo abaixo, o **frente a frente**: nos voos que as duas vendem, em quantos
    cada uma e mais barata.
-2. **Numeros da busca** — voos com CVC, cobertura e a 1a posicao em Recomendados.
-3. **Por companhia** — menor preco CVC x menor preco Decolar, a diferenca em %,
-   a cobertura e o selo de tempo da fonte no ConectaAS (vermelho quando deu
+2. **Cobertura CVC x Decolar** — em quantos dos voos da busca cada uma tem
+   oferta, em barras lado a lado, com a quantidade de voos de cada uma.
+3. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
+   no top 10 de Recomendados.
+4. **Por companhia** — menor preco CVC x menor preco Decolar, a diferenca em %,
+   a cobertura das duas e o selo de tempo da fonte no ConectaAS (vermelho quando deu
    timeout).
-4. **Posicoes**, **combinacoes de companhias** e, recolhidos, o **log do
+5. **Posicoes**, **combinacoes de companhias** e, recolhidos, o **log do
    ConectaAS** (links para o Kibana) e o **diagnostico**.
 
 A Decolar e localizada pelo nome ou id do agente (`RIVAL` no topo do
@@ -57,6 +60,11 @@ avisa. Uma oferta dividida entre a CVC e a Decolar conta para as duas.
 
 A comparacao com a Decolar e campo novo da analise e **ainda nao existe no
 Python** (`robo_cia_skyscanner.py`); os numeros que ja existiam nao mudaram.
+
+Cores: CVC em amarelo com azul-marinho e Decolar em roxo com branco, as cores
+das marcas. Ficam em variaveis no topo do `painel.html` (`--cvc`,
+`--cvc-tinta`, `--decolar`, `--decolar-tinta`) para acertar o tom exato num
+lugar so.
 
 O icone fica em `icones/` (`icone.svg` e a fonte; os PNG 16/32/48/128 sao
 gerados dele — o de 16 px sai sem o selo laranja, que nesse tamanho vira borrao).
