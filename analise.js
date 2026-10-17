@@ -55,10 +55,21 @@ var CVC = (() => {
         const geral = min(opcoes.map((po) => po.price.amount));
         let reg = vistos.get(rid);
         if (!reg) {
-          reg = { cias: ciasDoItinerario(r), agente: null, geral };
+          reg = { cias: ciasDoItinerario(r), agente: null, geral, conc: null, concIds: [] };
           vistos.set(rid, reg);
         }
         reg.geral = Math.min(reg.geral, geral);
+        // menor preco de CONCORRENTE (qualquer agente que nao o nosso) e quem
+        // o trouxe. Empate: guarda todos. Campo novo — nao muda nenhum numero
+        // que ja existia (e ainda nao tem par no Python).
+        for (const po of opcoes) {
+          const ids = (po.agentIds || []).filter((a) => a !== agente);
+          if (!ids.length) continue;
+          const v = po.price.amount;
+          if (reg.conc === null || v < reg.conc) { reg.conc = v; reg.concIds = [...ids]; }
+          else if (v === reg.conc)
+            for (const a of ids) if (!reg.concIds.includes(a)) reg.concIds.push(a);
+        }
         if (precosAg.length) {
           const menor = min(precosAg);
           reg.agente = reg.agente === null ? menor : Math.min(reg.agente, menor);
@@ -77,10 +88,12 @@ var CVC = (() => {
       for (const cia of reg.cias) {
         let d = porCia.get(cia);
         if (!d) {
-          d = { cia, voos_agente: 0, voos_busca: 0, menor_agente: null, menor_busca: null };
+          d = { cia, voos_agente: 0, voos_busca: 0, menor_agente: null, menor_busca: null,
+                menor_concorrente: null, concorrentes: [] };
           porCia.set(cia, d);
         }
         d.voos_busca += 1;
+        juntaConcorrente(d, reg);
         if (d.menor_busca === null || reg.geral < d.menor_busca) d.menor_busca = reg.geral;
         if (tem) {
           d.voos_agente += 1;
@@ -89,6 +102,10 @@ var CVC = (() => {
       }
     }
 
+    const nomes = (ids) => ids.map((a) => agentesNomes[a] || a);
+    const geralConc = { menor_concorrente: null, concorrentes: [] };
+    for (const reg of vistos.values()) juntaConcorrente(geralConc, reg);
+
     const linhas = [...porCia.values()]
       .sort((a, b) => (b.voos_agente - a.voos_agente) || (b.voos_busca - a.voos_busca))
       .map((d) => ({
@@ -96,7 +113,14 @@ var CVC = (() => {
         cobertura: d.voos_busca ? d.voos_agente / d.voos_busca : 0,
         delta: (d.menor_agente !== null && d.menor_busca)
           ? (d.menor_agente - d.menor_busca) / d.menor_busca * 100 : null,
+        concorrentes: nomes(d.concorrentes),
+        delta_concorrente: (d.menor_agente !== null && d.menor_concorrente)
+          ? (d.menor_agente - d.menor_concorrente) / d.menor_concorrente * 100 : null,
       }));
+
+    let menorAgente = null;
+    for (const r of vistos.values())
+      if (r.agente !== null && (menorAgente === null || r.agente < menorAgente)) menorAgente = r.agente;
 
     const total = vistos.size;
     let doAgente = 0;
@@ -110,7 +134,22 @@ var CVC = (() => {
       itinerarios_do_agente: doAgente,
       por_cia: linhas,
       combinadas: Object.fromEntries([...combos.entries()].sort((a, b) => b[1] - a[1])),
+      // o concorrente que trouxe o menor preco da busca inteira
+      menor_concorrente: geralConc.menor_concorrente,
+      concorrentes: nomes(geralConc.concorrentes),
+      menor_agente: menorAgente,
     };
+  }
+
+  // Acumula em `d` o menor preco de concorrente de um itinerario (empate soma).
+  function juntaConcorrente(d, reg) {
+    if (reg.conc === null) return;
+    if (d.menor_concorrente === null || reg.conc < d.menor_concorrente) {
+      d.menor_concorrente = reg.conc;
+      d.concorrentes = [...reg.concIds];
+    } else if (reg.conc === d.menor_concorrente) {
+      for (const a of reg.concIds) if (!d.concorrentes.includes(a)) d.concorrentes.push(a);
+    }
   }
 
   // Usa UM payload — o mais completo — porque aqui a ordem importa: results vem

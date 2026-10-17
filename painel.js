@@ -8,141 +8,207 @@ const brl = (v) => (v == null ? "—"
   : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
 const ms = (v) => `${Number(v).toLocaleString("pt-BR")} ms`;
 const pct = (v) => `${(v * 100).toFixed(0)}%`;
+// diferenca em %, com sinal e virgula: "+6,7%" / "-2,7%"
+const dif = (d) => `${d > 0 ? "+" : ""}${d.toLocaleString("pt-BR",
+  { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+const dia = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? `${m[3]}/${m[2]}` : esc(iso);
+};
+// "Decolar, MaxMilhas e mais 2"
+const quem = (lista) => {
+  if (!lista || !lista.length) return "—";
+  const nomes = lista.slice(0, 2).map(esc).join(", ");
+  return lista.length > 2 ? `${nomes} e mais ${lista.length - 2}` : nomes;
+};
 
-function cabecalho(e) {
-  const site = e.site
-    ? `<span class="site ${esc(e.site)}">${esc(e.site_nome || e.site)}</span>` : "";
-  return `<h1>Analise CVC ${site}</h1>`;
+// ---- blocos ---------------------------------------------------------------- #
+function topo(e) {
+  const chip = e.site
+    ? `<span class="chip ${esc(e.site)}">${esc(e.site_nome || e.site)}</span>` : "";
+  return `<div class="topo"><img src="icones/icone32.png" alt=""><b>Metabusca CVC</b>${chip}</div>`;
 }
 
-function rota(c) {
-  if (!c) return '<span class="fraco">rota nao reconhecida na URL</span>';
-  const volta = c.volta ? ` · volta ${esc(c.volta)}` : " · so ida";
-  return `<b>${esc(c.origem)} → ${esc(c.destino)}</b> · ida ${esc(c.ida)}${volta}`
-    + ` · ${esc(c.adultos)} adulto(s)`;
+function cabecalhoRota(c, status) {
+  if (!c) return `<div class="rota fraco">Rota não reconhecida</div>${status}`;
+  const datas = c.volta ? `${dia(c.ida)} → ${dia(c.volta)}` : `${dia(c.ida)} · só ida`;
+  const adultos = `${c.adultos} adulto${c.adultos > 1 ? "s" : ""}`;
+  return `<div class="rota">${esc(c.origem)} → ${esc(c.destino)}</div>
+    <div class="meta">${datas} · ${adultos}</div>${status}`;
 }
+
+const status = (classe, texto) =>
+  `<div class="status"><span class="ponto ${classe}"></span>${texto}</div>`;
 
 function vigiando(e) {
-  return `${cabecalho(e)}
-    <div class="caixa">Site reconhecido. Vigiando a aba — faca a busca normalmente.<br>
-    ${rota(e.rota)}</div>`;
+  return topo(e) + cabecalhoRota(e.rota,
+    status("", e.rota ? "Pronto para ler — faça ou atualize a busca"
+                      : "Site reconhecido — faça uma busca de voos"));
 }
 
 function coletando(e) {
   const fase = e.completou
-    ? `busca completa; ouvindo ofertas atrasadas (${esc(e.carencia)}s)`
-    : `esperando status=complete (ate ${esc(e.resta)}s)`;
-  return `${cabecalho(e)}
-    <div class="caixa">Coletando: <b>${esc(e.polls)}</b> poll(s) · ultimo status
-    <code>${esc(e.status_poll)}</code><br>${esc(fase)}<br>${rota(e.cfg)}</div>`;
+    ? `Busca completa · ouvindo ofertas atrasadas (${esc(e.carencia)}s)`
+    : `Lendo resultados · ${esc(e.polls)} leitura(s) · até ${esc(e.resta)}s`;
+  return topo(e) + cabecalhoRota(e.cfg, status("vivo", fase));
+}
+
+// O cartao principal: quem trouxe o menor preco e como a CVC ficou.
+function destaque(e) {
+  if (e.menor_concorrente == null) {
+    return `<div class="cartao destaque"><div class="rotulo">Menor preço de concorrente</div>
+      <div class="quem">Nenhum concorrente nesta busca</div>
+      ${e.menor_agente != null ? `<div class="suave">CVC a partir de ${brl(e.menor_agente)}</div>` : ""}
+    </div>`;
+  }
+  let comparo = `<div class="comparo"><span class="suave">CVC</span>
+    <span class="fraco">sem oferta nesta busca</span></div>`;
+  if (e.menor_agente != null) {
+    const d = (e.menor_agente - e.menor_concorrente) / e.menor_concorrente * 100;
+    const tag = d <= 0
+      ? `<span class="tag bom">${d === 0 ? "empata" : dif(d)} · CVC na frente</span>`
+      : `<span class="tag ruim">${dif(d)}</span>`;
+    comparo = `<div class="comparo"><span>Menor CVC <b>${brl(e.menor_agente)}</b></span>${tag}</div>`;
+  }
+  return `<div class="cartao destaque">
+    <div class="rotulo">Menor preço de concorrente</div>
+    <div class="quem">${quem(e.concorrentes)}</div>
+    <div class="preco">${brl(e.menor_concorrente)}</div>
+    ${comparo}
+  </div>`;
+}
+
+function kpis(e) {
+  const cob = e.total_itinerarios ? pct(e.itinerarios_do_agente / e.total_itinerarios) : "—";
+  const pos = e.posicoes && e.posicoes.primeira != null ? `${e.posicoes.primeira}º` : "—";
+  return `<div class="kpis">
+    <div class="kpi"><b>${e.itinerarios_do_agente}<span> /${e.total_itinerarios}</span></b><span>voos com CVC</span></div>
+    <div class="kpi"><b>${cob}</b><span>cobertura</span></div>
+    <div class="kpi"><b>${pos}</b><span>1ª posição</span></div>
+  </div>`;
 }
 
 function seloTempo(l) {
-  const s = [];
   if (l.timeout_ms != null)
-    s.push(`<span class="selo timeout">${esc(l.fonte_timeout)} timeout ${ms(l.timeout_ms)}</span>`);
-  else if (l.fonte_timeout)
-    s.push(`<span class="selo timeout">${esc(l.fonte_timeout)} falhou</span>`);
-  if (l.tempo_ms != null) s.push(`<span class="selo">${esc(l.fonte)} ${ms(l.tempo_ms)}</span>`);
-  return s.join(" ") || '<span class="fraco">—</span>';
+    return `<span class="selo timeout">${esc(l.fonte_timeout)} timeout ${ms(l.timeout_ms)}</span>`;
+  if (l.fonte_timeout) return `<span class="selo timeout">${esc(l.fonte_timeout)} falhou</span>`;
+  if (l.tempo_ms != null) return `<span class="selo">${esc(l.fonte)} ${ms(l.tempo_ms)}</span>`;
+  return "";
 }
 
-function tabelaCias(linhas) {
-  if (!linhas.length) return '<p class="fraco">Nenhum itinerario.</p>';
-  const corpo = linhas.map((l) => {
-    const delta = l.delta == null ? "—"
-      : `<span class="${l.delta > 0 ? "neg" : "pos"}">${l.delta > 0 ? "+" : ""}${l.delta.toFixed(1)}%</span>`;
-    return `<tr><td>${esc(l.cia)}<br>${seloTempo(l)}</td>
-      <td>${l.voos_agente}/${l.voos_busca}<br><span class="fraco">${pct(l.cobertura)}</span></td>
-      <td>${brl(l.menor_agente)}</td><td>${brl(l.menor_busca)}</td><td>${delta}</td></tr>`;
-  }).join("");
-  return `<table><thead><tr><th>Companhia</th><th>Voos CVC</th><th>Menor CVC</th>
-    <th>Menor busca</th><th>Δ</th></tr></thead><tbody>${corpo}</tbody></table>`;
+function cia(l) {
+  let difer = "";
+  if (l.delta_concorrente != null) {
+    const d = l.delta_concorrente;
+    difer = ` <span class="tag ${d <= 0 ? "bom" : "ruim"}">${dif(d)}</span>`;
+  }
+  return `<div class="cia">
+    <div class="cia-topo"><span class="cia-nome">${esc(l.cia)}</span>${seloTempo(l)}</div>
+    <div class="cia-grade">
+      <div><div class="rotulo">CVC</div><div class="valor">${brl(l.menor_agente)}${difer}</div></div>
+      <div><div class="rotulo">Menor concorrente</div>
+        <div class="valor">${brl(l.menor_concorrente)}
+        ${l.concorrentes.length ? `<br><small>${quem(l.concorrentes)}</small>` : ""}</div></div>
+    </div>
+    <div class="cobertura"><span>${l.voos_agente} de ${l.voos_busca} voos</span>
+      <span class="barra"><i style="width:${(l.cobertura * 100).toFixed(0)}%"></i></span>
+      <span>${pct(l.cobertura)}</span></div>
+  </div>`;
 }
 
 function posicoes(p) {
-  if (!p || !p.total) return '<p class="fraco">Sem resultados ordenados.</p>';
+  if (!p || !p.total) return "";
   const faixas = Object.entries(p.no_topo || {})
-    .map(([n, q]) => `top ${n}: <b>${q}</b>`).join(" · ");
-  const lista = p.posicoes.length ? p.posicoes.slice(0, 40).join(", ")
-    + (p.posicoes.length > 40 ? "…" : "") : "nenhuma";
-  return `<div class="caixa">Primeira posicao: <b>${p.primeira ?? "—"}</b> de ${p.total}<br>
-    ${faixas}<br><span class="fraco">posicoes: ${esc(lista)}</span></div>`;
+    .map(([n, q]) => `<div class="linha-par"><span class="suave">no top ${n}</span><b>${q}</b></div>`)
+    .join("");
+  const chips = p.posicoes.slice(0, 30)
+    .map((n) => `<span class="${n <= 5 ? "topo5" : ""}">${n}</span>`).join("")
+    + (p.posicoes.length > 30 ? `<span>+${p.posicoes.length - 30}</span>` : "");
+  return `<h2>Posições em Recomendados</h2>
+    <div class="cartao">${faixas || '<span class="fraco">poucos resultados</span>'}
+    ${p.posicoes.length ? `<div class="posicoes">${chips}</div>`
+                        : '<div class="fraco">CVC fora da lista</div>'}
+    <div class="fraco" style="margin-top:6px">de ${p.total} resultados</div></div>`;
 }
 
-function dicionario(o, fmt) {
+function combinadas(c) {
+  const ks = Object.entries(c || {});
+  if (!ks.length) return "";
+  return `<h2>Combinações de companhias (CVC)</h2><div class="cartao">${ks.map(([k, v]) =>
+    `<div class="linha-par"><span>${esc(k.replace(/\+/g, " + "))}</span><b>${v}</b></div>`).join("")}</div>`;
+}
+
+function pares(o, fmt) {
   const ks = Object.entries(o || {});
   if (!ks.length) return '<span class="fraco">nenhuma</span>';
-  return ks.map(([k, v]) => `${esc(k)} ${fmt(v)}`).join(" · ");
+  return ks.map(([k, v]) => `<code>${esc(k)}</code> ${fmt(v)}`).join(" · ");
 }
 
-function blocoLog(e) {
+function log(e) {
   const l = e.log || {};
   if (l.erro) {
     const botao = l.precisaPermissao
       ? '<br><button id="permissao">Conceder acesso ao proxy ES</button>' : "";
-    return `<div class="caixa erro">Log do ConectaAS indisponivel: ${esc(l.erro)}${botao}</div>`;
+    return `<div class="aviso erro">Log do ConectaAS indisponível: ${esc(l.erro)}${botao}</div>`;
   }
-  if (!l.correlation_ids || !l.correlation_ids.length)
-    return `<div class="caixa aviso">Nenhum metaSearch no log para
-      <code>${esc(l.routes)}</code> desde ${esc(l.desde)}.</div>`;
-  const amb = l.ambiguo
-    ? `<div class="caixa aviso">${l.correlation_ids.length} buscas na janela — usando a mais
-       recente. Confira no Kibana qual e a sua.</div>` : "";
-  const ids = l.correlation_ids.map((c) => {
-    const h = (l.horarios || {})[c] || [];
-    const usado = c === l.usado ? " <b>(usado)</b>" : "";
-    return `<li><code>${esc(c.slice(0, 8))}</code>${usado} · ${esc((l.fontes_por_cid || {})[c])} fontes
-      · ${esc(h[0] || "")} · <a href="${esc(CVC.urlKibana(c))}" target="_blank">abrir no Kibana</a></li>`;
-  }).join("");
-  return `${amb}<p class="fraco">routes <code>${esc(l.routes)}</code> · ${esc(l.docs)} docs</p>
-    <ul>${ids}</ul>
-    <p>Outras fontes: ${dicionario(e.outras_fontes, ms)}</p>
-    <p>Outras fontes em timeout: ${dicionario(e.fontes_timeout, ms)}</p>`;
+  let corpo;
+  if (!l.correlation_ids || !l.correlation_ids.length) {
+    corpo = `<div class="suave">Nenhum metaSearch no log para esta rota desde ${esc(l.desde)}.</div>`;
+  } else {
+    const amb = l.ambiguo
+      ? `<div class="aviso">${l.correlation_ids.length} buscas na janela — usando a mais recente.
+         Confira no Kibana qual é a sua.</div>` : "";
+    const ids = l.correlation_ids.map((c) => {
+      const usado = c === l.usado ? " <b>· usado</b>" : "";
+      return `<li><code>${esc(c.slice(0, 8))}</code>${usado}
+        <span class="fraco">· ${esc((l.fontes_por_cid || {})[c])} fontes</span>
+        · <a href="${esc(CVC.urlKibana(c))}" target="_blank">Kibana ↗</a></li>`;
+    }).join("");
+    corpo = `${amb}<ul>${ids}</ul>
+      <div class="suave" style="margin-top:6px">Outras fontes: ${pares(e.outras_fontes, ms)}</div>
+      <div class="suave">Em timeout: ${pares(e.fontes_timeout, ms)}</div>`;
+  }
+  return `<details data-k="log"><summary>Log do ConectaAS</summary>
+    <div class="fraco"><code>${esc(l.routes)}</code> · ${esc(l.docs)} docs</div>${corpo}</details>`;
 }
 
 function pronto(e) {
   const avisos = [];
   if (!e.busca_completou)
-    avisos.push("Nenhum poll trouxe status=complete — a busca pode estar incompleta.");
+    avisos.push("A busca não chegou a completar — os números podem estar incompletos.");
   if (!e.agente_participa_da_busca)
-    avisos.push(`O agente ${e.agente} nao aparece na lista de agentes desta busca.`);
-  const combos = Object.keys(e.combinadas || {}).length
-    ? `<h2>Combinadas (CVC)</h2><p>${dicionario(e.combinadas, (v) => `<b>${v}</b>`)}</p>` : "";
-  return `${cabecalho(e)}
-    <p class="fraco">${rota(e.cfg)}<br>fechada as ${esc(e.quando)} · ${esc(e.polls)} poll(s)</p>
-    ${avisos.map((a) => `<div class="caixa aviso">${esc(a)}</div>`).join("")}
-    <div class="numeros">
-      <div><b>${e.itinerarios_do_agente}</b>itinerarios ${esc(e.agente_nome)}</div>
-      <div><b>${e.total_itinerarios}</b>itinerarios na busca</div>
-      <div><b>${e.total_itinerarios ? pct(e.itinerarios_do_agente / e.total_itinerarios) : "—"}</b>cobertura</div>
-    </div>
-    <h2>Por companhia</h2>${tabelaCias(e.por_cia || [])}
-    <h2>Posicoes (Recomendados)</h2>${posicoes(e.posicoes)}
-    ${combos}
-    <h2>Log do ConectaAS</h2>${blocoLog(e)}`;
+    avisos.push(`O agente ${e.agente} não aparece entre os agentes desta busca.`);
+  return topo(e)
+    + cabecalhoRota(e.cfg, status("ok", `Análise pronta às ${esc(e.quando)} · ${esc(e.polls)} leitura(s)`))
+    + avisos.map((a) => `<div class="aviso">${esc(a)}</div>`).join("")
+    + destaque(e)
+    + kpis(e)
+    + `<h2>Por companhia</h2><div class="cartao">${
+        (e.por_cia || []).map(cia).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
+    + posicoes(e.posicoes)
+    + combinadas(e.combinadas)
+    + `<h2>Detalhes</h2>` + log(e);
 }
 
 function diagnostico(d) {
   if (!d) return "";
-  return `<details><summary>Diagnostico</summary>
-    <p>corpos capturados: ${d.total_capturas} · requisicoes de busca vistas: ${d.total_vistos}</p>
-    <h2>Corpos capturados</h2><pre>${esc(JSON.stringify(d.capturas, null, 1))}</pre>
-    <h2>Requisicoes vistas</h2><pre>${esc(JSON.stringify(d.vistos, null, 1))}</pre>
-    <h2>Web Workers / service worker do site</h2>
-    <pre>${esc(JSON.stringify({ workers: d.workers, sw: d.sw }, null, 1))}</pre>
-    <h2>Falhas de leitura</h2><pre>${esc(JSON.stringify(d.falhas, null, 1))}</pre>
-  </details>`;
+  const bloco = (titulo, v) => `<div class="rotulo">${titulo}</div><pre>${esc(JSON.stringify(v, null, 1))}</pre>`;
+  return `<details data-k="diag"><summary>Diagnóstico</summary>
+    <div class="suave">${d.total_capturas} corpo(s) capturado(s) · ${d.total_vistos} requisição(ões) vista(s)</div>
+    ${bloco("Corpos capturados", d.capturas)}${bloco("Requisições vistas", d.vistos)}
+    ${bloco("Workers / service worker do site", { workers: d.workers, sw: d.sw })}
+    ${bloco("Falhas de leitura", d.falhas)}</details>`;
 }
 
+// ---- desenho --------------------------------------------------------------- #
 function desenha(e) {
   if (!e) return;
   const corpo = e.estado === "pronto" ? pronto(e)
     : e.estado === "coletando" ? coletando(e) : vigiando(e);
-  // a batida redesenha a cada 3s; sem isto o <details> fecharia sozinho
-  const aberto = !!(app.querySelector("details") || {}).open;
+  // a batida redesenha a cada 3s; sem isto os <details> fechariam sozinhos
+  const abertos = new Set([...app.querySelectorAll("details[open]")].map((d) => d.dataset.k));
   app.innerHTML = corpo + diagnostico(e.diagnostico);
-  if (aberto && app.querySelector("details")) app.querySelector("details").open = true;
+  for (const d of app.querySelectorAll("details")) if (abertos.has(d.dataset.k)) d.open = true;
   const b = document.getElementById("permissao");
   if (b) b.onclick = () => chrome.permissions.request(
     { origins: ["https://api-java-soap-partnership.k8s-cvc.com.br/*"] });

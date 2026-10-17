@@ -100,3 +100,31 @@ test("routes do log", () => {
     "SAO,RIO,2026-09-17+RIO,SAO,2026-09-24");
   assert.equal(CVC.rotasDoLog("SAO", "RIO", "2026-09-17", null), "SAO,RIO,2026-09-17");
 });
+
+test("concorrente que trouxe o menor preco (geral e por companhia, com empate)", () => {
+  const pl = {
+    itineraries: {
+      context: { status: "complete" },
+      agents: [{ id: "cvc_", name: "CVC" }, { id: "dec", name: "Decolar" }, { id: "mm", name: "MaxMilhas" }],
+      results: [
+        itin("a", ["Azul"], [[["cvc_"], 500], [["dec"], 470], [["mm"], 470]]),
+        itin("b", ["GOL Linhas Aéreas"], [[["cvc_", "dec"], 300], [["mm"], 320]]),
+        itin("c", ["LATAM Airlines"], [[["cvc_"], 900]]),   // so a CVC vende
+      ],
+    },
+  };
+  const r = CVC.contaPorCia([pl], "cvc_");
+  assert.equal(r.menor_concorrente, 300);
+  assert.deepEqual(r.concorrentes, ["Decolar"]);   // opcao dividida com a CVC conta para o outro
+  assert.equal(r.menor_agente, 300);
+  const azul = r.por_cia.find((l) => l.cia === "Azul");
+  assert.equal(azul.menor_concorrente, 470);
+  assert.deepEqual(azul.concorrentes, ["Decolar", "MaxMilhas"]);
+  assert.ok(Math.abs(azul.delta_concorrente - (30 / 470 * 100)) < 1e-9);
+  // numeros antigos intactos
+  assert.equal(azul.menor_busca, 470);
+  const latam = r.por_cia.find((l) => l.cia === "LATAM Airlines");
+  assert.equal(latam.menor_concorrente, null);
+  assert.deepEqual(latam.concorrentes, []);
+  assert.equal(latam.delta_concorrente, null);
+});

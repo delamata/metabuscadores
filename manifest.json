@@ -1,26 +1,61 @@
 {
   "manifest_version": 3,
   "name": "Captura Metabusca (CVC)",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Analisa a busca que VOCE fez a mao no Skyscanner ou no Kayak: voos CVC por companhia, posicoes e tempo de cada fonte no log do ConectaAS. Sem servidor local.",
-  "permissions": ["sidePanel", "storage"],
-  "host_permissions": ["https://api-java-soap-partnership.k8s-cvc.com.br/*"],
-  "background": { "service_worker": "servico.js" },
-  "action": { "default_title": "Analise CVC — abre o painel" },
-  "side_panel": { "default_path": "painel.html" },
+  "icons": {
+    "16": "icones/icone16.png",
+    "32": "icones/icone32.png",
+    "48": "icones/icone48.png",
+    "128": "icones/icone128.png"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api-java-soap-partnership.k8s-cvc.com.br/*"
+  ],
+  "background": {
+    "service_worker": "servico.js"
+  },
+  "action": {
+    "default_title": "Metabusca CVC — abre o painel",
+    "default_icon": {
+      "16": "icones/icone16.png",
+      "32": "icones/icone32.png",
+      "48": "icones/icone48.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "painel.html"
+  },
   "content_scripts": [
     {
-      "matches": ["https://www.skyscanner.com.br/*", "https://www.skyscanner.net/*",
-                  "https://www.kayak.com.br/*", "https://kayak.com.br/*"],
-      "js": ["gancho.js"],
+      "matches": [
+        "https://www.skyscanner.com.br/*",
+        "https://www.skyscanner.net/*",
+        "https://www.kayak.com.br/*",
+        "https://kayak.com.br/*"
+      ],
+      "js": [
+        "gancho.js"
+      ],
       "world": "MAIN",
       "run_at": "document_start",
       "all_frames": true
     },
     {
-      "matches": ["https://www.skyscanner.com.br/*", "https://www.skyscanner.net/*",
-                  "https://www.kayak.com.br/*", "https://kayak.com.br/*"],
-      "js": ["analise.js", "coletor.js"],
+      "matches": [
+        "https://www.skyscanner.com.br/*",
+        "https://www.skyscanner.net/*",
+        "https://www.kayak.com.br/*",
+        "https://kayak.com.br/*"
+      ],
+      "js": [
+        "analise.js",
+        "coletor.js"
+      ],
       "world": "ISOLATED",
       "run_at": "document_start",
       "all_frames": true

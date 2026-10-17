@@ -1,4 +1,4 @@
-# Captura Metabusca (CVC) — Skyscanner e Kayak, busca manual, analise no painel
+# Metabusca CVC — Skyscanner e Kayak, busca manual, analise no painel
 
 **Voce** faz a busca no Skyscanner ou no Kayak, no seu Chrome de sempre. A
 extensao **reconhece o site ao entrar**, le o corpo das respostas de busca que a
@@ -13,6 +13,26 @@ O Kayak devolve o mesmo payload do Skyscanner (`itineraries.results[].pricingOpt
 entao a analise e **uma so**; por site muda apenas a leitura da rota na URL. O
 icone ganha o selo **SKY** ou **KYK** quando o site e reconhecido, e o painel
 mostra de qual site veio a busca.
+
+## O que o painel mostra
+
+1. **Menor preco de concorrente** — no topo: quem trouxe o menor preco da busca
+   (qualquer agente que nao seja `cvc_`; empate lista todos) e quanto a CVC
+   ficou acima ou abaixo dele.
+2. **Numeros da busca** — voos com CVC, cobertura e a 1a posicao em Recomendados.
+3. **Por companhia** — menor preco CVC x menor concorrente (com o nome), a
+   diferenca em %, a cobertura e o selo de tempo da fonte no ConectaAS
+   (vermelho quando deu timeout).
+4. **Posicoes**, **combinacoes de companhias** e, recolhidos, o **log do
+   ConectaAS** (links para o Kibana) e o **diagnostico**.
+
+Uma opcao de preco dividida entre a CVC e outro agente conta para o outro
+tambem: ele oferece aquele preco. O menor preco de concorrente e campo novo da
+analise e **ainda nao existe no Python** (`robo_cia_skyscanner.py`); os numeros
+que ja existiam nao mudaram.
+
+O icone fica em `icones/` (`icone.svg` e a fonte; os PNG 16/32/48/128 sao
+gerados dele — o de 16 px sai sem o selo laranja, que nesse tamanho vira borrao).
 
 **Nao precisa de servidor local.** A analise roda em `analise.js` e o log do
 ConectaAS e consultado pelo service worker (`host_permissions` no proxy
@@ -33,7 +53,8 @@ Elasticsearch — precisa de VPN).
 | `analise.js` | ISOLATED (+ painel) | reconhece o site, le a rota da URL e faz as contas (porte de `robo_cia_*.py`) |
 | `coletor.js` | ISOLATED | junta os polls, fecha a busca, publica o resultado |
 | `servico.js` | service worker | chama o proxy ES e pinta o selo do icone (fora do caminho critico) |
-| `painel.html`/`painel.js` | painel | so desenha |
+| `painel.html`/`painel.js` | painel | so desenha (tema claro e escuro, segue o sistema) |
+| `icones/` | — | icone da extensao |
 
 O payload **nunca sai da aba**: o coletor escreve o resultado (alguns KB) direto
 em `chrome.storage.local`, de onde o painel le. O service worker NAO esta no

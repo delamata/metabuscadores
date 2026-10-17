@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#fundo)"/>
+  <!-- lupa -->
+  <circle cx="54" cy="54" r="30" fill="#ffffff" fill-opacity=".16" stroke="#fff" stroke-width="10"/>
+  <path d="M76 76 L102 102" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+  <!-- aviao dentro da lupa, subindo para a direita (nariz a nordeste) -->
+  <g transform="translate(54 54) rotate(45) scale(1.05)">
+    <path fill="#fff" d="M0-22c2.6 0 4 2 4 4.5V-6l17 9.5v5L4 3.5V13l5.5 4v4.5L0 19l-9.5 2.5V17l5.5-4V3.5l-17 5v-5L-4-6v-11.5C-4-20-2.6-22 0-22z"/>
+  </g>
+  <!-- etiqueta de menor preco (some no 16px) -->
+  <g id="selo">
+  <circle cx="100" cy="30" r="15" fill="#f97316" stroke="#fff" stroke-width="4"/>
+  <path d="M93 31 l5 5 l9-11" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
