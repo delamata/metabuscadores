@@ -1,4 +1,4 @@
-# Metabusca CVC — Skyscanner e Kayak, busca manual, analise no painel
+# Metabuscadores CVC — Skyscanner e Kayak, busca manual, analise no painel
 
 **Voce** faz a busca no Skyscanner ou no Kayak, no seu Chrome de sempre. A
 extensao **reconhece o site ao entrar**, le o corpo das respostas de busca que a

@@ -26,7 +26,7 @@ const quem = (lista) => {
 function topo(e) {
   const chip = e.site
     ? `<span class="chip ${esc(e.site)}">${esc(e.site_nome || e.site)}</span>` : "";
-  return `<div class="topo"><img src="icones/icone32.png" alt=""><b>Metabusca CVC</b>${chip}</div>`;
+  return `<div class="topo"><img src="icones/icone32.png" alt=""><b>Metabuscadores CVC</b>${chip}</div>`;
 }
 
 function cabecalhoRota(c, status) {
