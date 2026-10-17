@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Analise CVC</title>
+<style>
+  :root { --tinta: #1d2330; --fraco: #6b7280; --linha: #e5e7eb; --fundo: #fff;
+          --azul: #0770e3; --laranja: #ff690f; --verde: #15803d; --vermelho: #b91c1c;
+          --amarelo: #a16207; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px; font: 13px/1.4 system-ui, sans-serif;
+         color: var(--tinta); background: var(--fundo); }
+  h1 { font-size: 15px; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; }
+  h2 { font-size: 13px; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .04em;
+       color: var(--fraco); }
+  .site { font-size: 11px; font-weight: 700; color: #fff; padding: 2px 6px; border-radius: 4px; }
+  .site.skyscanner { background: var(--azul); }
+  .site.kayak { background: var(--laranja); }
+  .fraco { color: var(--fraco); }
+  .caixa { border: 1px solid var(--linha); border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .aviso { border-color: #fcd34d; background: #fffbeb; }
+  .erro { border-color: #fca5a5; background: #fef2f2; }
+  .numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .numeros div { border: 1px solid var(--linha); border-radius: 6px; padding: 6px; }
+  .numeros b { display: block; font-size: 17px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 4px 3px; border-bottom: 1px solid var(--linha); text-align: right;
+           vertical-align: top; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--fraco); font-weight: 600; }
+  .selo { display: inline-block; font-size: 11px; padding: 1px 5px; border-radius: 4px;
+          background: #eef2ff; white-space: nowrap; margin-top: 2px; }
+  .selo.timeout { background: var(--vermelho); color: #fff; }
+  .pos { color: var(--verde); } .neg { color: var(--vermelho); }
+  a { color: var(--azul); }
+  button { font: inherit; padding: 4px 10px; }
+  details { margin-top: 16px; } summary { cursor: pointer; color: var(--fraco); }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 11px; background: #f9fafb;
+        padding: 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="app"><p class="fraco">Aguardando... abra o Skyscanner ou o Kayak numa aba.</p></div>
+<script src="analise.js"></script>
+<script src="painel.js"></script>
+</body>
+</html>

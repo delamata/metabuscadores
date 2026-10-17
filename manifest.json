@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Captura Metabusca (CVC)",
+  "version": "0.4.0",
+  "description": "Analisa a busca que VOCE fez a mao no Skyscanner ou no Kayak: voos CVC por companhia, posicoes e tempo de cada fonte no log do ConectaAS. Sem servidor local.",
+  "permissions": ["sidePanel", "storage"],
+  "host_permissions": ["https://api-java-soap-partnership.k8s-cvc.com.br/*"],
+  "background": { "service_worker": "servico.js" },
+  "action": { "default_title": "Analise CVC — abre o painel" },
+  "side_panel": { "default_path": "painel.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.skyscanner.com.br/*", "https://www.skyscanner.net/*",
+                  "https://www.kayak.com.br/*", "https://kayak.com.br/*"],
+      "js": ["gancho.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://www.skyscanner.com.br/*", "https://www.skyscanner.net/*",
+                  "https://www.kayak.com.br/*", "https://kayak.com.br/*"],
+      "js": ["analise.js", "coletor.js"],
+      "world": "ISOLATED",
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
