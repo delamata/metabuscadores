@@ -204,3 +204,10 @@ test("Kayak: corpo sem resultados de preco nao vira dado", () => {
   assert.equal(CVC.doKayak(null), null);
   assert.equal(CVC.doKayak({ status: "first-phase", results: [] }), null);
 });
+
+test("Kayak: acha os resultados aninhados (JSON embutido no HTML)", () => {
+  const embutido = { props: { pageProps: { initialState: { flights: kayak() } } }, outra: [1, 2] };
+  const pl = CVC.doKayak(embutido);
+  assert.equal(pl.itineraries.results.length, 2);
+  assert.deepEqual(pl.itineraries.results[1].legs[0].carriers.marketing, [{ name: "GOL" }]);
+});

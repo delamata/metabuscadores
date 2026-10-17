@@ -18,6 +18,17 @@ para `itineraries/pricingOptions/agentIds`, entao a analise continua **uma so**.
 A CVC e reconhecida pelo nome/codigo do provedor (`/\bcvc\b/i`, ex. "CVC Viagens")
 e vira o agente `cvc_`.
 
+**O Kayak busca dentro de Web Workers.** Medido em 2026-10-17 numa busca real
+(SAO-MCZ): a pagina fez 24 requisicoes, nenhuma de busca, e criou 2 workers a
+partir de `blob:`. O gancho da pagina nao enxerga o interior de um worker,
+entao o `gancho.js` tambem se instala neles: quando a pagina cria um worker a
+partir de um Blob de script, o worker nasce de `[gancho] + [Blob original]` —
+o mesmo codigo do site, mesma origem e mesma CSP. O que o worker captura volta
+pela `BroadcastChannel` (com um id por aba) e segue o caminho normal. No
+Diagnostico, cada worker aparece como `[com gancho]` ou `[sem gancho]`. Os
+resultados que o Kayak embute no HTML (`<script type="application/json">`)
+tambem sao lidos.
+
 Se um site mudar de formato, o painel avisa "Nenhuma resposta de busca foi
 reconhecida" e o botao **Baixar respostas capturadas** (tambem no Diagnostico)
 salva as ultimas 8 respostas cruas num `.json` — e com esse arquivo que o
@@ -104,8 +115,9 @@ Constantes no topo do `coletor.js`.
 - **corpos capturados** — o que o gancho conseguiu ler
 - **requisicoes vistas** — tudo que bate `search|radar|poll|itiner|flights|conductor|fps`,
   mesmo o que o gancho nao le. Se cresce e "corpos" fica parado, os polls estao fora do alcance.
-- **Web Workers / service worker do site** — um content script nao alcanca o
-  interior de um worker; se o polling morar la, o caminho e `chrome.debugger`.
+- **Web Workers / service worker do site** — workers criados de `blob:` recebem
+  o gancho (`[com gancho]`); um worker carregado de URL `https:` comum nao
+  recebe. Se o polling morar num desses, o caminho e `chrome.debugger`.
 
 ## Fonte em timeout (por que GOL e SGOL, e so SGOL)
 

@@ -256,8 +256,28 @@ var CVC = (() => {
     return nomes.map((n) => ({ name: n }));
   }
 
-  function doKayak(pl) {
-    if (!pl || typeof pl !== "object" || !Array.isArray(pl.results)) return null;
+  // Um item de resultado do Kayak: tem precos por agencia.
+  const ehResultadoKayak = (r) => r && typeof r === "object"
+    && (Array.isArray(r.bookingOptions) || Array.isArray(r.optionsByFare));
+
+  // No poll, results[] fica no topo; no JSON embutido no HTML fica aninhado.
+  // Procura o primeiro objeto com results[] de cara de Kayak (largura primeiro,
+  // com teto para nao varrer 40 MB a toa).
+  function achaKayak(raiz) {
+    const fila = [raiz];
+    for (let n = 0; fila.length && n < 50000; n++) {
+      const o = fila.shift();
+      if (!o || typeof o !== "object") continue;
+      if (Array.isArray(o.results) && o.results.some(ehResultadoKayak)) return o;
+      for (const v of Array.isArray(o) ? o : Object.values(o))
+        if (v && typeof v === "object") fila.push(v);
+    }
+    return null;
+  }
+
+  function doKayak(entrada) {
+    const pl = achaKayak(entrada);
+    if (!pl) return null;
     const provedores = pl.providers || {};
     const agentes = new Map();
     const results = [];

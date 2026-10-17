@@ -99,11 +99,18 @@ window.addEventListener("message", (ev) => {
     publicaAgora();
     return;
   }
-  if (d.tipo === "worker") { diag.workers.push(d.url); publicaAgora(); return; }
+  if (d.tipo === "worker") {
+    diag.workers.push(`${d.injetado ? "[com gancho] " : "[sem gancho] "}${d.url}`);
+    publicaAgora();
+    return;
+  }
   if (d.tipo === "sw") { diag.sw = d.escopos; publicaAgora(); return; }
   if (d.tipo === "falha") { diag.falhas.push({ url: d.url, erro: d.erro }); publicaAgora(); return; }
   if (d.tipo !== "vitrine") return;
+  processaVitrine(d);
+});
 
+function processaVitrine(d) {
   guardaAmostra(d, d.corpo);
   let payload;
   try { payload = JSON.parse(d.corpo); } catch (e) { return; }
@@ -121,7 +128,23 @@ window.addEventListener("message", (ev) => {
     return;
   }
   recebe(payload, d.t0, d.corpo.length, d.url, d.metodo);
-});
+}
+
+// Dados embutidos no HTML. Alem do poll, o Kayak pode mandar a primeira leva
+// de resultados ja renderizada no servidor, num <script type="application/json">.
+// Passa pelo mesmo caminho do poll: marca no texto, tradutor, analise.
+const MARCAS_HTML = ['"itineraries"', '"bookingOptions"', '"optionsByFare"', '"providerInfo"'];
+function lehtml() {
+  if (!SITE || window.top !== window) return;
+  for (const el of document.querySelectorAll('script[type="application/json"], script[type="text/json"]')) {
+    const corpo = el.textContent || "";
+    if (corpo.length < 100 || !MARCAS_HTML.some((m) => corpo.includes(m))) continue;
+    processaVitrine({ corpo, t0: Date.now(), url: `${location.pathname}#${el.id || "script-json"}`,
+                      metodo: "HTML", status: 200, origem: "html" });
+  }
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", lehtml);
+else lehtml();
 
 // Pedido do painel: baixa as ultimas respostas capturadas num arquivo .json,
 // para ajustar o leitor com o dado real quando um site mudar de formato.
