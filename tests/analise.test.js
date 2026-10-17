@@ -128,3 +128,59 @@ test("concorrente que trouxe o menor preco (geral e por companhia, com empate)",
   assert.deepEqual(latam.concorrentes, []);
   assert.equal(latam.delta_concorrente, null);
 });
+
+// Formato do poll do Kayak (/i/api/search/dynamic/flights/poll), reduzido.
+const kayak = () => ({
+  searchId: "abc", status: "complete",
+  airlines: { AD: { code: "AD", name: "Azul" }, G3: { code: "G3", name: "GOL" } },
+  legs: { L1: { segments: [{ id: "S1" }, { id: "S2" }] }, L2: { segments: [{ id: "S3" }] } },
+  segments: { S1: { airline: "AD" }, S2: { airline: "AD" }, S3: { airline: "G3" } },
+  results: [
+    { type: "ad", resultId: "anuncio" },   // card patrocinado: sem preco
+    {
+      type: "core", resultId: "r1", legs: [{ id: "L1" }],
+      bookingOptions: [
+        { providerInfo: { code: "VAIDEPROMO", displayName: "VaidePromo" }, displayPrice: { price: 1590 } },
+        { providerInfo: { code: "CVCVIAGENS", displayName: "CVC Viagens" }, displayPrice: { price: 1787 } },
+      ],
+      optionsByFare: [{ options: [
+        { providerInfo: { code: "MAXMILHAS", displayName: "MaxMilhas" }, displayPrice: { price: "R$ 1.637" } },
+      ] }],
+    },
+    {
+      type: "core", resultId: "r2", legs: [{ id: "L2" }],
+      bookingOptions: [{ providerInfo: { code: "DECOLAR", displayName: "Decolar" }, fees: { rawPrice: 1675 } }],
+    },
+  ],
+});
+
+test("Kayak: traduz o poll para o formato da analise", () => {
+  const pl = CVC.doKayak(kayak());
+  const it = pl.itineraries;
+  assert.equal(it.context.status, "complete");
+  assert.equal(it.results.length, 2);                      // o anuncio sai
+  assert.deepEqual(it.results[0].legs[0].carriers.marketing, [{ name: "Azul" }]);
+  assert.deepEqual(it.results[1].legs[0].carriers.marketing, [{ name: "GOL" }]);
+  const precos = it.results[0].pricingOptions.map((p) => [p.agentIds[0], p.price.amount]);
+  assert.deepEqual(precos, [["VAIDEPROMO", 1590], ["cvc_", 1787], ["MAXMILHAS", 1637]]);
+  assert.ok(it.agents.some((a) => a.id === "cvc_" && a.name === "CVC Viagens"));
+});
+
+test("Kayak: analise completa reconhece a CVC e o concorrente mais barato", () => {
+  const r = CVC.contaPorCia([CVC.doKayak(kayak())], "cvc_");
+  assert.equal(r.agente_participa_da_busca, true);
+  assert.equal(r.agente_nome, "CVC Viagens");
+  assert.equal(r.itinerarios_do_agente, 1);
+  assert.equal(r.menor_concorrente, 1590);
+  assert.deepEqual(r.concorrentes, ["VaidePromo"]);
+  const azul = r.por_cia.find((l) => l.cia === "Azul");
+  assert.equal(azul.menor_agente, 1787);
+  assert.equal(azul.menor_concorrente, 1590);
+});
+
+test("Kayak: corpo sem resultados de preco nao vira dado", () => {
+  assert.equal(CVC.doKayak({ results: [{ type: "ad" }] }), null);
+  assert.equal(CVC.doKayak({ foo: 1 }), null);
+  assert.equal(CVC.doKayak(null), null);
+  assert.equal(CVC.doKayak({ status: "first-phase", results: [] }), null);
+});

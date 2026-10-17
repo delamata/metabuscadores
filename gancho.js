@@ -20,8 +20,14 @@
   window.__capturaCVC = true;
 
   // quem e candidato a ser lido (a leitura e de um clone, nao atrapalha a pagina)
-  const INTERESSE = /(search|radar|poll|itiner|flights|conductor|fps)/i;
-  const MARCA = '"itineraries"';
+  // "/i/api/" e o prefixo das APIs internas do Kayak
+  const INTERESSE = /(search|radar|poll|itiner|flights|conductor|fps|\/i\/api\/)/i;
+  // Skyscanner traz "itineraries"; o Kayak traz os precos por agencia em
+  // bookingOptions/optionsByFare com providerInfo. Qualquer uma basta.
+  const MARCAS = ['"itineraries"', '"bookingOptions"', '"optionsByFare"', '"providerInfo"'];
+  // corpo JSON grande sem marca vai junto no "visto", para a amostra que o
+  // painel deixa baixar: e assim que se descobre um formato novo com dado real
+  const AMOSTRA_MIN = 5000, AMOSTRA_MAX = 20e6;
 
   function fala(msg) {
     try {
@@ -29,10 +35,15 @@
     } catch (e) { /* pagina fechando; a busca nao depende disso */ }
   }
 
-  // Decide pelo corpo: com itineraries e busca; sem, fica so no diagnostico.
+  // Decide pelo corpo: com uma das marcas e busca; sem, fica so no diagnostico.
   function julga(corpo, meta) {
-    if (corpo && corpo.includes(MARCA)) fala(Object.assign({ tipo: "vitrine", corpo }, meta));
-    else fala(Object.assign({ tipo: "visto", bytes: corpo ? corpo.length : 0 }, meta));
+    if (corpo && MARCAS.some((m) => corpo.includes(m))) {
+      fala(Object.assign({ tipo: "vitrine", corpo }, meta));
+      return;
+    }
+    const n = corpo ? corpo.length : 0;
+    const amostra = n >= AMOSTRA_MIN && n <= AMOSTRA_MAX && /^\s*[[{]/.test(corpo) ? corpo : undefined;
+    fala(Object.assign({ tipo: "visto", bytes: n, amostra }, meta));
   }
 
   const fetchNativo = window.fetch;

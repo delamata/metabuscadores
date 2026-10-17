@@ -18,6 +18,21 @@ let prazo = 0, timer = null, fechando = false;
 // vivia 3 segundos na tela antes de ser apagado
 let ultimoResultado = null;
 const diag = { capturas: [], vistos: [], workers: [], sw: null, falhas: [] };
+// As ultimas respostas candidatas, cruas, para o botao "Baixar respostas" do
+// painel. Ficam so na memoria da aba e so saem dela se o usuario clicar.
+const AMOSTRAS = 8;
+let amostras = [];
+function guardaAmostra(d, corpo) {
+  amostras.push({ url: d.url, metodo: d.metodo, status: d.status, origem: d.origem,
+                  quando: new Date().toISOString(), corpo });
+  if (amostras.length > AMOSTRAS) amostras = amostras.slice(-AMOSTRAS);
+}
+
+// chaves do topo de um JSON, para o diagnostico dizer "que formato e esse"
+function chavesDe(obj) {
+  if (!obj || typeof obj !== "object") return typeof obj;
+  return Object.keys(obj).slice(0, 12).join(",");
+}
 
 // O estado vai direto para chrome.storage.local, sem passar pelo service
 // worker. Um content script tem acesso a chrome.storage, e o SW do MV3 morre
@@ -41,6 +56,7 @@ function resumoDiag() {
     falhas: diag.falhas.slice(-5),
     total_capturas: diag.capturas.length,
     total_vistos: diag.vistos.length,
+    amostras: amostras.length,
   };
 }
 
@@ -70,8 +86,13 @@ window.addEventListener("message", (ev) => {
 
   if (d.tipo === "visto") {
     const curto = d.url.replace(/^https?:\/\/[^/]+/, "").slice(0, 90);
+    let nota = d.nota;
+    if (d.amostra) {
+      guardaAmostra(d, d.amostra);
+      try { nota = nota || `chaves: ${chavesDe(JSON.parse(d.amostra))}`; } catch (e) { /* nao e JSON */ }
+    }
     diag.vistos.push({ m: d.metodo, url: curto, st: d.status, o: d.origem,
-                       bytes: d.bytes || 0, nota: d.nota,
+                       bytes: d.bytes || 0, nota,
                        t: new Date().toLocaleTimeString("pt-BR") });
     publicaAgora();
     return;
@@ -81,18 +102,48 @@ window.addEventListener("message", (ev) => {
   if (d.tipo === "falha") { diag.falhas.push({ url: d.url, erro: d.erro }); publicaAgora(); return; }
   if (d.tipo !== "vitrine") return;
 
+  guardaAmostra(d, d.corpo);
   let payload;
   try { payload = JSON.parse(d.corpo); } catch (e) { return; }
-  // o gancho filtra por conter "itineraries" no texto; aqui confirmamos que e
-  // mesmo o objeto que a analise consome, e nao a palavra solta noutro lugar
+  const cru = payload;
+  // Kayak: traduz para o formato do Skyscanner antes de qualquer conta
+  if (payload && !payload.itineraries) payload = CVC.doKayak(payload);
+  // o gancho filtra por palavra no texto; aqui confirmamos que e mesmo o
+  // objeto que a analise consome, e nao a palavra solta noutro lugar
   if (!payload || typeof payload.itineraries !== "object" || !payload.itineraries) {
     diag.vistos.push({ m: d.metodo, url: (d.url || "").slice(-60), st: d.status,
-                       o: d.origem, bytes: d.corpo.length, nota: "sem objeto itineraries",
+                       o: d.origem, bytes: d.corpo.length,
+                       nota: `formato nao reconhecido — chaves: ${chavesDe(cru)}`,
                        t: new Date().toLocaleTimeString("pt-BR") });
     publicaAgora();
     return;
   }
   recebe(payload, d.t0, d.corpo.length, d.url, d.metodo);
+});
+
+// Pedido do painel: baixa as ultimas respostas capturadas num arquivo .json,
+// para ajustar o leitor com o dado real quando um site mudar de formato.
+chrome.runtime.onMessage.addListener((msg, _rem, responde) => {
+  if (!msg || msg.tipo !== "baixar" || window.top !== window) return false;
+  const arquivo = {
+    site: SITE, pagina: location.href, gerado: new Date().toISOString(),
+    diagnostico: resumoDiag(),
+    respostas: amostras.map((a) => {
+      let corpo = a.corpo;
+      try { corpo = JSON.parse(a.corpo); } catch (e) { /* fica texto */ }
+      return Object.assign({}, a, { corpo });
+    }),
+  };
+  const blob = new Blob([JSON.stringify(arquivo)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `metabuscadores-${SITE}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+  document.documentElement.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  responde({ ok: true, n: amostras.length });
+  return false;
 });
 
 function recebe(payload, quando, bytes, url, metodo) {

@@ -41,9 +41,31 @@ const status = (classe, texto) =>
   `<div class="status"><span class="ponto ${classe}"></span>${texto}</div>`;
 
 function vigiando(e) {
+  const d = e.diagnostico || {};
+  // viu trafego de busca mas nao reconheceu nenhuma resposta: diz isso com
+  // todas as letras e oferece o arquivo para ajustar o leitor
+  const semLeitura = d.total_vistos > 0 && !d.total_capturas
+    ? `<div class="aviso">Nenhuma resposta de busca foi reconhecida ainda
+       (${d.total_vistos} requisição(ões) vista(s)). Atualize a página de resultados
+       (F5) com o painel aberto. Se continuar assim, baixe as respostas e envie
+       para ajuste do leitor.<br>${botaoBaixar()}</div>` : "";
   return topo(e) + cabecalhoRota(e.rota,
     status("", e.rota ? "Pronto para ler — faça ou atualize a busca"
-                      : "Site reconhecido — faça uma busca de voos"));
+                      : "Site reconhecido — faça uma busca de voos")) + semLeitura;
+}
+
+const botaoBaixar = () => '<button class="baixar">Baixar respostas capturadas</button>';
+
+async function baixar(botao) {
+  const texto = botao.textContent;
+  try {
+    const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const r = await chrome.tabs.sendMessage(aba.id, { tipo: "baixar" }, { frameId: 0 });
+    botao.textContent = r && r.n ? `Baixado (${r.n} resposta(s))` : "Nada capturado ainda";
+  } catch (e) {
+    botao.textContent = "A aba não respondeu — recarregue a página";
+  }
+  setTimeout(() => { botao.textContent = texto; }, 4000);
 }
 
 function coletando(e) {
@@ -194,7 +216,9 @@ function diagnostico(d) {
   if (!d) return "";
   const bloco = (titulo, v) => `<div class="rotulo">${titulo}</div><pre>${esc(JSON.stringify(v, null, 1))}</pre>`;
   return `<details data-k="diag"><summary>Diagnóstico</summary>
-    <div class="suave">${d.total_capturas} corpo(s) capturado(s) · ${d.total_vistos} requisição(ões) vista(s)</div>
+    <div class="suave">${d.total_capturas} corpo(s) capturado(s) · ${d.total_vistos} requisição(ões) vista(s)
+      · ${d.amostras || 0} resposta(s) guardada(s)</div>
+    ${botaoBaixar()}
     ${bloco("Corpos capturados", d.capturas)}${bloco("Requisições vistas", d.vistos)}
     ${bloco("Workers / service worker do site", { workers: d.workers, sw: d.sw })}
     ${bloco("Falhas de leitura", d.falhas)}</details>`;
@@ -209,6 +233,7 @@ function desenha(e) {
   const abertos = new Set([...app.querySelectorAll("details[open]")].map((d) => d.dataset.k));
   app.innerHTML = corpo + diagnostico(e.diagnostico);
   for (const d of app.querySelectorAll("details")) if (abertos.has(d.dataset.k)) d.open = true;
+  for (const bb of app.querySelectorAll("button.baixar")) bb.onclick = () => baixar(bb);
   const b = document.getElementById("permissao");
   if (b) b.onclick = () => chrome.permissions.request(
     { origins: ["https://api-java-soap-partnership.k8s-cvc.com.br/*"] });

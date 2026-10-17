@@ -9,8 +9,19 @@ propria pagina pediu, roda a analise e mostra no painel lateral.
 | Skyscanner | `skyscanner.com.br/transporte/passagens-aereas/saoa/rioa/260917/260924/` (e `.net/transport/flights/...`) |
 | Kayak | `kayak.com.br/flights/SAO-RIO/2026-09-17/2026-09-24/2adults` |
 
-O Kayak devolve o mesmo payload do Skyscanner (`itineraries.results[].pricingOptions[].agentIds`),
-entao a analise e **uma so**; por site muda apenas a leitura da rota na URL. O
+O Kayak **nao** usa o formato do Skyscanner: o poll
+(`/i/api/search/dynamic/flights/poll`) traz `results[]` com os precos por
+agencia em `bookingOptions` / `optionsByFare[].options`, cada um com
+`providerInfo {code, displayName}` e `displayPrice {price}`, e as companhias
+por referencia (`legs` -> `segments` -> `airlines`). `CVC.doKayak` traduz isso
+para `itineraries/pricingOptions/agentIds`, entao a analise continua **uma so**.
+A CVC e reconhecida pelo nome/codigo do provedor (`/\bcvc\b/i`, ex. "CVC Viagens")
+e vira o agente `cvc_`.
+
+Se um site mudar de formato, o painel avisa "Nenhuma resposta de busca foi
+reconhecida" e o botao **Baixar respostas capturadas** (tambem no Diagnostico)
+salva as ultimas 8 respostas cruas num `.json` — e com esse arquivo que o
+leitor e ajustado, com dado real e nao com palpite. O
 icone ganha o selo **SKY** ou **KYK** quando o site e reconhecido, e o painel
 mostra de qual site veio a busca.
 

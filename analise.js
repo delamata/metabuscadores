@@ -178,6 +178,97 @@ var CVC = (() => {
     return { posicoes, total: resultados.length, primeira: posicoes[0] ?? null, no_topo: faixas };
   }
 
+  // ---- Kayak -> formato do Skyscanner -------------------------------------- #
+  // O poll do Kayak (/i/api/search/dynamic/flights/poll) traz results[] com os
+  // precos por agencia em bookingOptions e/ou optionsByFare[].options, cada um
+  // com providerInfo {code, displayName} e displayPrice {price}. As companhias
+  // vem por referencia: result.legs[].segments[].id -> segments{} -> airline ->
+  // airlines{}. Traduzimos para itineraries/pricingOptions/agentIds para que a
+  // analise continue UMA so. A CVC vira o agente "cvc_" pelo nome/codigo.
+  //
+  // Se o corpo nao tiver nada disto, devolve null — e o diagnostico registra
+  // as chaves para o formato ser ajustado com dado real, nao com palpite.
+  const RE_CVC = /\bcvc\b/i;
+  const AGENTE_CVC = "cvc_";
+
+  function precoKayak(op) {
+    const cands = [op && op.displayPrice && op.displayPrice.price,
+                   op && op.price && (op.price.price ?? op.price.amount ?? op.price),
+                   op && op.fees && op.fees.rawPrice,
+                   op && op.fees && op.fees.totalPrice];
+    for (const c of cands) {
+      const v = typeof c === "string" ? Number(c.replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".")) : c;
+      if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+    }
+    return null;
+  }
+
+  function agenteKayak(op, provedores) {
+    const pi = (op && (op.providerInfo || op.provider)) || {};
+    let code = pi.code || pi.providerCode || op.providerCode || pi.id || null;
+    let nome = pi.displayName || pi.name || null;
+    if (!nome && code && provedores[code]) nome = provedores[code].displayName || provedores[code].name;
+    if (!code && !nome) return null;
+    const id = (RE_CVC.test(nome || "") || RE_CVC.test(code || "")) ? AGENTE_CVC : String(code || nome);
+    return { id, nome: nome || String(code) };
+  }
+
+  function ciasKayak(r, pl) {
+    const segs = pl.segments || {}, cias = pl.airlines || {}, legsMap = pl.legs || {};
+    const nomes = [];
+    const anota = (cod) => {
+      if (!cod) return;
+      const c = typeof cod === "object" ? (cod.code || cod.name) : cod;
+      const nome = (cias[c] && (cias[c].name || cias[c].displayName))
+        || (typeof cod === "object" && cod.name) || c;
+      if (!nomes.includes(nome)) nomes.push(nome);
+    };
+    for (const leg of r.legs || []) {
+      const l = (leg && leg.segments) ? leg : (legsMap[leg && leg.id] || legsMap[leg] || {});
+      for (const sg of l.segments || []) {
+        const s = (sg && (sg.airline || sg.marketingAirline)) ? sg : (segs[sg && sg.id] || segs[sg] || {});
+        anota(s.airline || s.marketingAirline || s.carrier);
+      }
+      if (l.airlines) for (const a of l.airlines) anota(a);
+    }
+    if (!nomes.length && r.airlines) for (const a of r.airlines) anota(a);
+    return nomes.map((n) => ({ name: n }));
+  }
+
+  function doKayak(pl) {
+    if (!pl || typeof pl !== "object" || !Array.isArray(pl.results)) return null;
+    const provedores = pl.providers || {};
+    const agentes = new Map();
+    const results = [];
+    for (const r of pl.results) {
+      if (!r || typeof r !== "object") continue;
+      const ops = [...(r.bookingOptions || [])];
+      for (const f of r.optionsByFare || []) ops.push(...((f && f.options) || []));
+      const pricingOptions = [];
+      for (const op of ops) {
+        const v = precoKayak(op), ag = agenteKayak(op, provedores);
+        if (v === null || !ag) continue;
+        if (!agentes.has(ag.id)) agentes.set(ag.id, ag.nome);
+        pricingOptions.push({ agentIds: [ag.id], price: { amount: v } });
+      }
+      if (!pricingOptions.length) continue;   // anuncio, card patrocinado
+      results.push({
+        id: r.resultId || r.id,
+        legs: [{ carriers: { marketing: ciasKayak(r, pl) } }],
+        pricingOptions,
+      });
+    }
+    if (!results.length) return null;
+    const st = String(pl.status || (pl.searchStatus || {}).status || "").toLowerCase();
+    return {
+      itineraries: {
+        context: { status: st === "complete" || st === "done" ? "complete" : "incomplete" },
+        agents: [...agentes].map(([id, name]) => ({ id, name })),
+        results,
+      },
+    };
+  }
+
   // ---- log do ConectaAS ---------------------------------------------------- #
   function rotasDoLog(origem, destino, ida, volta) {
     let r = `${origem},${destino},${ida}`;
@@ -408,7 +499,7 @@ var CVC = (() => {
 
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
-           SITES, siteDaUrl,
+           SITES, siteDaUrl, doKayak,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();
