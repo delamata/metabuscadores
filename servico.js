@@ -6,11 +6,20 @@
 // Nada aqui pode lancar na avaliacao: no MV3 um throw no topo derruba o worker
 // inteiro, listeners inclusive.
 
-// CONFERIR: endpoint _search do proxy ES (precisa de VPN). O host tem de estar
-// em host_permissions no manifest.
-const ES_URL = "https://api-java-soap-partnership.k8s-cvc.com.br/_search";
-const ES_ORIGEM = new URL(ES_URL).origin + "/*";
+// Endpoint _search do proxy ES (precisa de VPN). O padrao abaixo foi um
+// palpite (o servico.js original nao veio junto) e deu HTTP 404; o endereco
+// certo e configurado no painel e fica em chrome.storage.local "config.es_url".
+// O host tem de estar em host_permissions ou optional_host_permissions.
+const ES_URL_PADRAO = "https://api-java-soap-partnership.k8s-cvc.com.br/_search";
 const TEMPO_MAX = 20000;
+
+async function esUrl() {
+  try {
+    const { config } = await chrome.storage.local.get("config");
+    if (config && config.es_url) return config.es_url;
+  } catch (e) { /* cai no padrao */ }
+  return ES_URL_PADRAO;
+}
 
 const SELOS = { skyscanner: ["SKY", "#0770e3"], kayak: ["KYK", "#ff690f"] };
 
@@ -19,12 +28,17 @@ try {
 } catch (e) { /* versao sem sidePanel: o painel ainda abre pelo menu */ }
 
 async function consultaLog(query) {
+  const ES_URL = await esUrl();
+  let ES_ORIGEM;
+  try { ES_ORIGEM = new URL(ES_URL).origin + "/*"; }
+  catch (e) { return { ok: false, erro: `endereco do proxy ES invalido: ${ES_URL}`, url: ES_URL }; }
   let temPermissao = true;
   try {
     temPermissao = await chrome.permissions.contains({ origins: [ES_ORIGEM] });
   } catch (e) { /* segue e deixa o fetch responder */ }
   if (!temPermissao)
-    return { ok: false, erro: `sem permissao para ${ES_ORIGEM}`, precisaPermissao: true };
+    return { ok: false, erro: `sem permissao para ${ES_ORIGEM}`, precisaPermissao: true,
+             origem: ES_ORIGEM, url: ES_URL };
 
   const ctrl = new AbortController();
   const relogio = setTimeout(() => ctrl.abort(), TEMPO_MAX);
@@ -35,13 +49,18 @@ async function consultaLog(query) {
       body: JSON.stringify(query),
       signal: ctrl.signal,
     });
-    if (!r.ok) return { ok: false, erro: `HTTP ${r.status} no proxy ES` };
+    if (!r.ok) {
+      // o ES costuma dizer o motivo no corpo (index_not_found, no handler...)
+      let motivo = "";
+      try { motivo = (await r.text()).replace(/\s+/g, " ").slice(0, 300); } catch (e) { /* sem corpo */ }
+      return { ok: false, erro: `HTTP ${r.status} no proxy ES`, detalhe: motivo, url: ES_URL };
+    }
     return { ok: true, dados: await r.json() };
   } catch (e) {
     const erro = e && e.name === "AbortError"
       ? `proxy ES nao respondeu em ${TEMPO_MAX / 1000}s (VPN ligada?)`
       : `falha ao chamar o proxy ES: ${String(e).slice(0, 150)} (VPN ligada?)`;
-    return { ok: false, erro };
+    return { ok: false, erro, url: ES_URL };
   } finally {
     clearTimeout(relogio);
   }

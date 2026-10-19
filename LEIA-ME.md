@@ -100,9 +100,14 @@ batida periodica — senao as duas se alternariam no painel.
 
 ## CONFERIR antes de usar
 
-- **`ES_URL` em `servico.js`** — o `servico.js` original nao veio junto, entao o
-  endpoint foi reescrito como `https://api-java-soap-partnership.k8s-cvc.com.br/_search`.
-  Se o original usava outro path (indice, `/api/...`), troque a constante.
+- **Endereco do proxy ES** — o `servico.js` original nao veio junto, e o padrao
+  reescrito (`https://api-java-soap-partnership.k8s-cvc.com.br/_search`) da
+  **HTTP 404**: falta o caminho certo (em geral o indice, ex.
+  `/<indice>/_search`). Configure no painel: quando o log falha, o erro mostra
+  o endereco usado e a resposta do servidor, com um campo para o endereco
+  certo; sem erro, o mesmo campo fica em **Diagnostico**. Salvo em
+  `chrome.storage.local` (`config.es_url`). Use o mesmo endereco do
+  `robo_cia_kibana.py`. Host fora de `*.k8s-cvc.com.br`/`*.cvc.com.br` nao e aceito.
 - **Agente** — `AGENTE = "cvc_"` em `coletor.js` vale para os dois sites. Se no
   Kayak a CVC tiver outro id em `agentIds`, o painel avisa
   ("O agente cvc_ nao aparece na lista de agentes desta busca").

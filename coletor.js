@@ -241,7 +241,7 @@ async function fecha() {
   const desde = new Date(meuT0 - 5000).toISOString().replace(/\.\d+Z$/, "Z");
 
   let log = { docs: 0, correlation_ids: [], por_correlation: {}, horarios: {} };
-  let erroLog = null, precisaPermissao = false;
+  let erroLog = null, precisaPermissao = false, erroDetalhe = {};
   try {
     const r = await chrome.runtime.sendMessage(
       { tipo: "log", query: CVC.consultaLogQuery(routes, desde) });
@@ -249,6 +249,8 @@ async function fecha() {
     else {
       erroLog = (r && r.erro) || "sem resposta do service worker";
       precisaPermissao = !!(r && r.precisaPermissao);
+      erroDetalhe = { detalhe: (r && r.detalhe) || "", url: (r && r.url) || "",
+                      origem: (r && r.origem) || "" };
     }
   } catch (e) {
     erroLog = String(e).slice(0, 200);
@@ -307,6 +309,8 @@ async function fecha() {
     log: { routes, desde, docs: log.docs, correlation_ids: log.correlation_ids,
            usado, ambiguo: log.correlation_ids.length > 1, erro: erroLog,
            precisaPermissao, horarios: log.horarios,
+           erro_detalhe: erroDetalhe.detalhe, url_tentada: erroDetalhe.url,
+           origem_permissao: erroDetalhe.origem,
            // quantas fontes responderam em cada correlationId: 15 por busca, e
            // e assim que se ve que N correlationIds = N buscas na janela
            fontes_por_cid: Object.fromEntries(log.correlation_ids.map(

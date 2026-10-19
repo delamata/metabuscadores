@@ -211,8 +211,11 @@ function log(e) {
   const l = e.log || {};
   if (l.erro) {
     const botao = l.precisaPermissao
-      ? '<br><button id="permissao">Conceder acesso ao proxy ES</button>' : "";
-    return `<div class="aviso erro">Log do ConectaAS indisponível: ${esc(l.erro)}${botao}</div>`;
+      ? `<br><button id="permissao" data-origem="${esc(l.origem_permissao || "")}">Conceder acesso ao proxy ES</button>` : "";
+    const det = l.erro_detalhe ? `<div class="erro-det"><code>${esc(l.erro_detalhe)}</code></div>` : "";
+    const tentada = l.url_tentada ? `<div class="erro-det">Endereço usado: <code>${esc(l.url_tentada)}</code></div>` : "";
+    return `<div class="aviso erro">Log do ConectaAS indisponível: ${esc(l.erro)}${det}${tentada}${botao}</div>
+      ${configEs()}`;
   }
   let corpo;
   if (!l.correlation_ids || !l.correlation_ids.length) {
@@ -235,6 +238,43 @@ function log(e) {
     <div class="fraco"><code>${esc(l.routes)}</code> · ${esc(l.docs)} docs</div>${corpo}</details>`;
 }
 
+// Endereco do proxy ES, editavel: o padrao do codigo foi um palpite.
+let esUrlAtual = "";
+chrome.storage.local.get("config").then(({ config }) => { esUrlAtual = (config && config.es_url) || ""; });
+
+function configEs() {
+  return `<details data-k="cfg-es" open><summary>Endereço do proxy ES</summary>
+    <div class="suave">URL completa do <code>_search</code> (o mesmo que o robo_cia_kibana.py usa).
+      Depois de salvar, refaça a busca (F5).</div>
+    <input id="es-url" type="url" spellcheck="false" placeholder="https://.../indice/_search">
+    <button id="es-salvar">Salvar</button> <span id="es-ok" class="suave"></span></details>`;
+}
+
+function ligaConfigEs() {
+  const campo = document.getElementById("es-url");
+  if (!campo) return;
+  if (document.activeElement !== campo && !campo.dataset.mexido) campo.value = esUrlAtual;
+  campo.oninput = () => { campo.dataset.mexido = "1"; };
+  document.getElementById("es-salvar").onclick = async () => {
+    const ok = document.getElementById("es-ok");
+    let url;
+    try { url = new URL(campo.value.trim()); } catch (e) { ok.textContent = "URL inválida"; return; }
+    if (url.protocol !== "https:") { ok.textContent = "use https://"; return; }
+    // host fora do manifest: pede permissao (precisa do clique do usuario)
+    const origem = `${url.origin}/*`;
+    let tem = false;
+    try { tem = await chrome.permissions.contains({ origins: [origem] }); } catch (e) { /* segue */ }
+    if (!tem) {
+      try { tem = await chrome.permissions.request({ origins: [origem] }); } catch (e) { tem = false; }
+      if (!tem) { ok.textContent = "sem permissão para esse host"; return; }
+    }
+    esUrlAtual = url.href;
+    await chrome.storage.local.set({ config: { es_url: esUrlAtual } });
+    delete campo.dataset.mexido;
+    ok.textContent = "salvo — refaça a busca";
+  };
+}
+
 function pronto(e) {
   const avisos = [];
   if (!e.busca_completou)
@@ -255,7 +295,7 @@ function pronto(e) {
     + `<h2>Detalhes</h2>` + log(e);
 }
 
-function diagnostico(d) {
+function diagnostico(d, comConfig) {
   if (!d) return "";
   const bloco = (titulo, v) => `<div class="rotulo">${titulo}</div><pre>${esc(JSON.stringify(v, null, 1))}</pre>`;
   return `<details data-k="diag"><summary>Diagnóstico</summary>
@@ -264,7 +304,8 @@ function diagnostico(d) {
     ${botaoBaixar()}
     ${bloco("Corpos capturados", d.capturas)}${bloco("Requisições vistas", d.vistos)}
     ${bloco("Workers / service worker do site", { workers: d.workers, sw: d.sw })}
-    ${bloco("Falhas de leitura", d.falhas)}</details>`;
+    ${bloco("Falhas de leitura", d.falhas)}
+    ${comConfig ? configEs().replace(" open>", ">") : ""}</details>`;
 }
 
 // ---- desenho --------------------------------------------------------------- #
@@ -274,12 +315,23 @@ function desenha(e) {
     : e.estado === "coletando" ? coletando(e) : vigiando(e);
   // a batida redesenha a cada 3s; sem isto os <details> fechariam sozinhos
   const abertos = new Set([...app.querySelectorAll("details[open]")].map((d) => d.dataset.k));
-  app.innerHTML = corpo + diagnostico(e.diagnostico);
+  // ...nem o campo do endereco perderia o que esta sendo digitado
+  const campo = document.getElementById("es-url");
+  const rascunho = campo && campo.dataset.mexido ? campo.value : null;
+  const comFoco = campo && document.activeElement === campo;
+  const cursor = campo ? campo.selectionStart : null;
+  // o campo do endereco aparece junto do erro do log; sem erro, fica no Diagnostico
+  const erroLog = e.estado === "pronto" && e.log && e.log.erro;
+  app.innerHTML = corpo + diagnostico(e.diagnostico, !erroLog);
+  const novo = document.getElementById("es-url");
+  if (novo && rascunho !== null) { novo.value = rascunho; novo.dataset.mexido = "1"; }
+  if (novo && comFoco) { novo.focus(); if (cursor !== null) novo.setSelectionRange(cursor, cursor); }
   for (const d of app.querySelectorAll("details")) if (abertos.has(d.dataset.k)) d.open = true;
   for (const bb of app.querySelectorAll("button.baixar")) bb.onclick = () => baixar(bb);
   const b = document.getElementById("permissao");
   if (b) b.onclick = () => chrome.permissions.request(
-    { origins: ["https://api-java-soap-partnership.k8s-cvc.com.br/*"] });
+    { origins: [b.dataset.origem || "https://api-java-soap-partnership.k8s-cvc.com.br/*"] });
+  ligaConfigEs();
 }
 
 chrome.storage.local.get("estado").then(({ estado }) => desenha(estado));

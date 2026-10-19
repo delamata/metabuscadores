@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Metabuscadores CVC",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Analisa a busca que VOCE fez a mao no Skyscanner ou no Kayak: voos CVC por companhia, posicoes e tempo de cada fonte no log do ConectaAS. Sem servidor local.",
   "icons": {
     "16": "icones/icone16.png",
@@ -12,6 +12,10 @@
   "permissions": [
     "sidePanel",
     "storage"
+  ],
+  "optional_host_permissions": [
+    "https://*.k8s-cvc.com.br/*",
+    "https://*.cvc.com.br/*"
   ],
   "host_permissions": [
     "https://api-java-soap-partnership.k8s-cvc.com.br/*"
