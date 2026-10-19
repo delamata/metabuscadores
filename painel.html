@@ -134,6 +134,14 @@
   details li { margin: 3px 0; }
   pre { white-space: pre-wrap; word-break: break-all; font-size: 10.5px; margin: 4px 0 10px;
         background: var(--fundo); padding: 8px; border-radius: 8px; max-height: 220px; overflow: auto; }
+  table.hist { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+  table.hist th { text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase;
+                  letter-spacing: .04em; color: var(--fraco); padding: 4px 0; }
+  table.hist td { padding: 6px 0; border-top: 1px solid var(--linha); vertical-align: top; }
+  table.hist th:not(:first-child), table.hist td:not(:first-child) { text-align: right; }
+  .botoes-hist { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  button.perigo { color: var(--ruim); }
+  button:disabled { opacity: .5; cursor: default; }
   .erro-det { margin-top: 4px; font-size: 11px; word-break: break-all; opacity: .9; }
   #es-url { width: 100%; margin-top: 8px; padding: 6px 8px; border-radius: 8px; font: 12px ui-monospace, monospace;
             border: 1px solid var(--linha); background: var(--fundo); color: var(--tinta); }
@@ -147,6 +155,7 @@
   e faça uma busca de voos.</p></div>
 </div>
 <script src="analise.js"></script>
+<script src="historico.js"></script>
 <script src="painel.js"></script>
 </body>
 </html>

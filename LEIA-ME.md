@@ -80,13 +80,33 @@ Elasticsearch — precisa de VPN).
 3. fixar o icone na barra e clicar -> abre o **painel lateral**
 4. pesquisar no Skyscanner ou no Kayak normalmente
 
+## Historico de buscas
+
+Cada busca fechada vira uma linha guardada **neste navegador**
+(`chrome.storage.local`, chaves `hist:<data>-<id>`, uma por busca para duas
+abas nao se atropelarem). No painel, o cartao **Historico de buscas** mostra o
+total e as ultimas 5, e tem:
+
+- **Exportar para Excel** — CSV no padrao do Excel em portugues (`;`, virgula
+  decimal, acentos com BOM UTF-8). Colunas: Data da busca, Hora, Site, Rota,
+  Data Ida, Data Volta, Adultos, Preco CVC, Preco Decolar, %Variacao, Voos CVC,
+  Voos Decolar, Voos na busca, Busca completa.
+- **Limpar historico** — pede dois cliques.
+
+Regras: %Variacao = (CVC - Decolar) / Decolar (positivo = CVC mais cara), a
+mesma do painel. Sem oferta de uma das duas, o preco e a % ficam **vazios**,
+nunca zero. A mesma rota buscada duas vezes gera duas linhas, cada uma com sua
+hora. O historico e de cada pessoa/navegador: para juntar o de varias pessoas,
+cada uma exporta. Remover a extensao apaga o historico — exporte antes.
+
 ## As pecas
 
 | arquivo | mundo | papel |
 |---|---|---|
 | `gancho.js` | MAIN | envolve `fetch`/`XHR` em `Proxy` e le um clone da resposta |
 | `analise.js` | ISOLATED (+ painel) | reconhece o site, le a rota da URL e faz as contas (porte de `robo_cia_*.py`) |
-| `coletor.js` | ISOLATED | junta os polls, fecha a busca, publica o resultado |
+| `coletor.js` | ISOLATED | junta os polls, fecha a busca, publica o resultado e grava o historico |
+| `historico.js` | ISOLATED (+ painel) | linha do historico e exportacao CSV |
 | `servico.js` | service worker | chama o proxy ES e pinta o selo do icone (fora do caminho critico) |
 | `painel.html`/`painel.js` | painel | so desenha (tema claro e escuro, segue o sistema) |
 | `icones/` | — | icone da extensao |

@@ -1,10 +1,10 @@
 {
   "name": "metabuscadores",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Extensao Chrome: analise CVC da busca feita a mao no Skyscanner e no Kayak",
   "scripts": {
     "test": "node --test",
-    "check": "node --check analise.js && node --check coletor.js && node --check gancho.js && node --check servico.js && node --check painel.js && node --test"
+    "check": "node --check analise.js && node --check historico.js && node --check coletor.js && node --check gancho.js && node --check servico.js && node --check painel.js && node --test"
   }
 }

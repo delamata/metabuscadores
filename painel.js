@@ -308,9 +308,68 @@ function diagnostico(d, comConfig) {
     ${comConfig ? configEs().replace(" open>", ">") : ""}</details>`;
 }
 
+// ---- historico --------------------------------------------------------------- #
+// Linhas gravadas pelo coletor (historico.js). Carregadas a parte do estado e
+// recarregadas quando uma chave "hist:" muda.
+let historico = [];
+let ultimoEstado = null;
+
+async function carregaHistorico() {
+  try { historico = HIST.deStorage(await chrome.storage.local.get(null)); }
+  catch (e) { historico = []; }
+}
+
+function cartaoHistorico() {
+  const n = historico.length;
+  const desde = n ? new Date(historico[0].quando).toLocaleDateString("pt-BR") : null;
+  const linhas = historico.slice(-5).reverse().map((l) => {
+    const v = l.variacao_pct;
+    const tag = v == null ? '<span class="fraco">—</span>'
+      : `<span class="tag ${v <= 0 ? "bom" : "ruim"}">${dif(v)}</span>`;
+    const datas = `${dia(l.ida)}${l.volta ? ` → ${dia(l.volta)}` : ""}`;
+    return `<tr><td><b>${esc(l.rota || "—")}</b><br><span class="fraco">${datas}</span></td>
+      <td>${brl(l.preco_cvc)}</td><td>${brl(l.preco_decolar)}</td><td>${tag}</td></tr>`;
+  }).join("");
+  return `<h2>Histórico de buscas</h2><div class="cartao">
+    <div class="cobertura-topo"><span><b>${n}</b> busca${n === 1 ? "" : "s"} gravada${n === 1 ? "" : "s"}</span>
+      <span class="suave">${desde ? `desde ${esc(desde)}` : "neste navegador"}</span></div>
+    ${n ? `<table class="hist"><thead><tr><th>Rota</th><th>CVC</th><th>Decolar</th><th>%</th></tr></thead>
+      <tbody>${linhas}</tbody></table>`
+        : '<div class="suave">Cada busca analisada vira uma linha aqui.</div>'}
+    <div class="botoes-hist">
+      <button id="hist-exportar" ${n ? "" : "disabled"}>Exportar para Excel</button>
+      <button id="hist-limpar" class="perigo" ${n ? "" : "disabled"}>Limpar histórico</button>
+    </div></div>`;
+}
+
+function exportaHistorico() {
+  const blob = new Blob([HIST.csv(historico)], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `metabuscadores-historico-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+// Apagar pede dois cliques: o painel lateral nao e lugar para confirm().
+let limparArmado = 0;
+async function limpaHistorico(botao) {
+  if (Date.now() - limparArmado > 4000) {
+    limparArmado = Date.now();
+    botao.textContent = `Clique de novo para apagar ${historico.length}`;
+    setTimeout(() => { if (botao.isConnected) botao.textContent = "Limpar histórico"; }, 4000);
+    return;
+  }
+  limparArmado = 0;
+  await chrome.storage.local.remove(historico.map((l) => l.chave));
+}
+
 // ---- desenho --------------------------------------------------------------- #
 function desenha(e) {
   if (!e) return;
+  ultimoEstado = e;
   const corpo = e.estado === "pronto" ? pronto(e)
     : e.estado === "coletando" ? coletando(e) : vigiando(e);
   // a batida redesenha a cada 3s; sem isto os <details> fechariam sozinhos
@@ -322,7 +381,7 @@ function desenha(e) {
   const cursor = campo ? campo.selectionStart : null;
   // o campo do endereco aparece junto do erro do log; sem erro, fica no Diagnostico
   const erroLog = e.estado === "pronto" && e.log && e.log.erro;
-  app.innerHTML = corpo + diagnostico(e.diagnostico, !erroLog);
+  app.innerHTML = corpo + cartaoHistorico() + diagnostico(e.diagnostico, !erroLog);
   const novo = document.getElementById("es-url");
   if (novo && rascunho !== null) { novo.value = rascunho; novo.dataset.mexido = "1"; }
   if (novo && comFoco) { novo.focus(); if (cursor !== null) novo.setSelectionRange(cursor, cursor); }
@@ -332,9 +391,18 @@ function desenha(e) {
   if (b) b.onclick = () => chrome.permissions.request(
     { origins: [b.dataset.origem || "https://api-java-soap-partnership.k8s-cvc.com.br/*"] });
   ligaConfigEs();
+  const ex = document.getElementById("hist-exportar");
+  if (ex) ex.onclick = exportaHistorico;
+  const lp = document.getElementById("hist-limpar");
+  if (lp) lp.onclick = () => limpaHistorico(lp);
 }
 
-chrome.storage.local.get("estado").then(({ estado }) => desenha(estado));
-chrome.storage.onChanged.addListener((mud, area) => {
-  if (area === "local" && mud.estado) desenha(mud.estado.newValue);
+carregaHistorico().then(() => chrome.storage.local.get("estado")).then(({ estado }) => desenha(estado));
+chrome.storage.onChanged.addListener(async (mud, area) => {
+  if (area !== "local") return;
+  if (Object.keys(mud).some((k) => k.startsWith(HIST.PREFIXO))) {
+    await carregaHistorico();
+    if (!mud.estado && ultimoEstado) desenha(ultimoEstado);
+  }
+  if (mud.estado) desenha(mud.estado.newValue);
 });

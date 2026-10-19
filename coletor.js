@@ -227,6 +227,17 @@ function reagenda() {
   timer = setTimeout(fecha, atraso);
 }
 
+// Uma linha no historico por busca fechada (ver historico.js). So o frame de
+// cima grava, para um iframe do site nao duplicar a linha.
+function gravaHistorico(res) {
+  if (window.top !== window || !res || !res.cfg) return;
+  try {
+    const quando = new Date();
+    const linha = HIST.linhaDoResultado(Object.assign({ site: SITE, site_nome: SITE_NOME }, res), quando);
+    chrome.storage.local.set({ [HIST.chaveNova(quando)]: linha }).catch(() => {});
+  } catch (e) { /* extensao recarregada por baixo da aba */ }
+}
+
 async function fecha() {
   if (fechando || !payloads.length) return;
   fechando = true;
@@ -317,6 +328,7 @@ async function fecha() {
              (c) => [c, Object.keys(log.por_correlation[c] || {}).length])) },
   };
   publica(ultimoResultado);
+  gravaHistorico(ultimoResultado);
   console.log(`[captura CVC/${SITE_NOME}] analise publicada — abra o painel lateral`);
   fechando = false;
 }
