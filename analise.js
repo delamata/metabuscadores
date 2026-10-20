@@ -228,22 +228,40 @@ var CVC = (() => {
   }
 
   // ---- rotulos das agencias ---------------------------------------------- #
-  // Nome de exibicao e cor de cada agencia da busca, decididos UMA vez a
-  // partir de por_agente (ordem da cobertura), para a mesma agencia ter o
-  // mesmo numero em todo o painel e no Excel:
-  //   - o nosso agente vira "CVC";
-  //   - apelido com `rotulo` fixo (Decolar -> "Concorrente 1");
-  //   - apelido com `manterNome` fica com o nome real (Zupper);
-  //   - o resto vira "Concorrente 2", "Concorrente 3"... na ordem.
-  // `cor` (de qualquer apelido que bata) diz ao painel como pintar.
+  // So a CVC aparece com o nome real. Cada concorrente vira "Concorrente " +
+  // um sufixo de 3 letras que nao expoe o nome: fixo no apelido (Decolar=dcl,
+  // Zupper=zpr, MaxMilhas=MXM, 123milhas=MLS) ou derivado pela mesma regra
+  // desses exemplos (sufixoDe). O mapa e montado UMA vez por busca, para a
+  // mesma agencia ter o mesmo rotulo em todo o painel. `cor` (de qualquer
+  // apelido que bata) diz ao painel como pintar.
+
+  // A regra dos exemplos: as 3 primeiras consoantes do nome, ignorando
+  // digitos e "h" (MilHas -> MLS) e sem repetir letra seguida (ZuPPer -> zpr).
+  // Com menos de 3 consoantes, completa com as vogais na ordem (GOL -> GLO).
+  function sufixoDe(nome) {
+    const letras = String(nome || "").normalize("NFD").replace(/[^a-z]/gi, "").toUpperCase();
+    const cons = [];
+    for (const c of letras.replace(/[AEIOUH]/g, "")) if (cons[cons.length - 1] !== c) cons.push(c);
+    let suf = cons.slice(0, 3).join("");
+    for (const v of letras.replace(/[^AEIOU]/g, "")) { if (suf.length >= 3) break; suf += v; }
+    return suf || "XXX";
+  }
+
   function rotulosDaBusca(porAgente, agente, apelidos) {
     const mapa = new Map();
-    let n = 2;
+    const usados = new Set((apelidos || []).filter((x) => x.sufixo).map((x) => x.sufixo.toUpperCase()));
     for (const ag of porAgente || []) {
       if (ag.id === agente) { mapa.set(ag.id, { rotulo: "CVC", cor: "cvc" }); continue; }
       const ap = (apelidos || []).find((x) => x.re.test(ag.nome || "") || x.re.test(ag.id || "")) || {};
-      const rotulo = ap.rotulo || (ap.manterNome ? (ag.nome || ag.id) : `Concorrente ${n++}`);
-      mapa.set(ag.id, { rotulo, cor: ap.cor || null });
+      let suf = ap.sufixo;
+      if (!suf) {
+        // derivado: se colidir com outro, ganha um numero (MLS, MLS2...)
+        const base = sufixoDe(ag.nome || ag.id);
+        suf = base;
+        for (let k = 2; usados.has(suf.toUpperCase()); k++) suf = `${base}${k}`;
+        usados.add(suf.toUpperCase());
+      }
+      mapa.set(ag.id, { rotulo: `Concorrente ${suf}`, cor: ap.cor || null });
     }
     return mapa;
   }
@@ -591,7 +609,7 @@ var CVC = (() => {
 
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
-           SITES, siteDaUrl, doKayak, rotulosDaBusca, rotulaTodas,
+           SITES, siteDaUrl, doKayak, rotulosDaBusca, rotulaTodas, sufixoDe,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();

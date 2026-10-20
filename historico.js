@@ -34,26 +34,21 @@ var HIST = (() => {
       agencia_menor: rotulos((res.menor_geral || {}).agencias),
       maior_busca: (res.maior_geral || {}).valor ?? null,
       agencia_maior: rotulos((res.maior_geral || {}).agencias),
-      // frente a frente CVC x Concorrente 1 nos voos que os dois vendem
+      // frente a frente CVC x Concorrente dcl nos voos que os dois vendem
       frente_cvc: (res.frente_a_frente || {}).cvc ?? null,
       frente_rival: (res.frente_a_frente || {}).rival ?? null,
       frente_empate: (res.frente_a_frente || {}).empate ?? null,
       primeira_posicao: (res.posicoes || {}).primeira ?? null,
       cvc_top10: ((res.posicoes || {}).no_topo || {})[10] ?? null,
-      // todas as agencias: rotulo do painel, nome real, voos com oferta e menor preco
-      agencias: (res.por_agente || []).map((a) => ({ rotulo: a.rotulo || a.nome, nome: a.nome || null,
-                                                     voos: a.voos, menor: a.menor })),
+      // todas as agencias: rotulo do painel (sem nome real), voos com oferta e menor preco
+      agencias: (res.por_agente || []).map((a) => ({ rotulo: a.rotulo || a.nome, voos: a.voos, menor: a.menor })),
     };
   }
 
-  // No Excel o numero vem com o nome real: "Concorrente 2 (MaxMilhas)". A
-  // numeracao muda de uma busca para outra; sem o nome, nao se compara linhas.
-  const comNome = (a) => {
-    const r = a.rotulo || a.nome;
-    return a.nome && a.nome !== r && r !== "CVC" ? `${r} (${a.nome})` : r;
-  };
-  const rotulos = (ags) => ((ags && ags.length) ? ags.map(comNome).join(", ") : null);
-  const zupper = (l) => (l.agencias || []).find((a) => /zupper/i.test(a.nome || a.rotulo || "")) || {};
+  // So a CVC com nome real, tambem no Excel: os concorrentes saem pelo rotulo
+  // ("Concorrente MXM"), que e fixo por agencia e permite comparar linhas.
+  const rotulos = (ags) => ((ags && ags.length) ? ags.map((a) => a.rotulo || a.nome).join(", ") : null);
+  const zpr = (l) => (l.agencias || []).find((a) => a.rotulo === "Concorrente zpr") || {};
 
   function chaveNova(quando) {
     return `${PREFIXO}${(quando || new Date()).toISOString()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -79,30 +74,30 @@ var HIST = (() => {
     ["Data Volta", (l) => isoParaBr(l.volta)],
     ["Adultos", (l) => l.adultos],
     ["Preço CVC", (l) => num(l.preco_cvc, 2)],
-    ["Preço Concorrente 1", (l) => num(l.preco_decolar, 2)],
+    ["Preço Concorrente dcl", (l) => num(l.preco_decolar, 2)],
     ["%Variação", (l) => num(l.variacao_pct, 2)],
     ["Voos CVC", (l) => l.voos_cvc],
-    ["Voos Concorrente 1", (l) => l.voos_decolar],
+    ["Voos Concorrente dcl", (l) => l.voos_decolar],
     ["Voos na busca", (l) => l.voos_busca],
     // calculadas na exportacao, entao valem tambem para linhas ja gravadas
     ["Cobertura CVC %", (l) => num(cobertura(l.voos_cvc, l.voos_busca), 1)],
-    ["Cobertura Concorrente 1 %", (l) => num(cobertura(l.voos_decolar, l.voos_busca), 1)],
-    ["Preço Zupper", (l) => num(zupper(l).menor, 2)],
-    ["Voos Zupper", (l) => zupper(l).voos],
-    ["Cobertura Zupper %", (l) => num(cobertura(zupper(l).voos, l.voos_busca), 1)],
+    ["Cobertura Concorrente dcl %", (l) => num(cobertura(l.voos_decolar, l.voos_busca), 1)],
+    ["Preço Concorrente zpr", (l) => num(zpr(l).menor, 2)],
+    ["Voos Concorrente zpr", (l) => zpr(l).voos],
+    ["Cobertura Concorrente zpr %", (l) => num(cobertura(zpr(l).voos, l.voos_busca), 1)],
     ["Concorrente + Barato (preço)", (l) => num(l.menor_busca, 2)],
     ["Concorrente + Barato", (l) => l.agencia_menor],
     ["Concorrente + Caro (preço)", (l) => num(l.maior_busca, 2)],
     ["Concorrente + Caro", (l) => l.agencia_maior],
     ["Voos CVC mais barata", (l) => l.frente_cvc],
-    ["Voos Concorrente 1 mais barato", (l) => l.frente_rival],
+    ["Voos Concorrente dcl mais barato", (l) => l.frente_rival],
     ["Voos empatados", (l) => l.frente_empate],
     ["1ª posição CVC", (l) => l.primeira_posicao],
     ["CVC no top 10", (l) => l.cvc_top10],
     ["Agências na busca", (l) => (l.agencias ? l.agencias.length : null)],
-    // todas as agencias numa celula: "Concorrente 1 (Decolar): 89,1% (367 voos, menor 3956,00) | ..."
+    // todas as agencias numa celula: "Concorrente dcl: 89,1% (367 voos, menor 3956,00) | ..."
     ["Cobertura por agência", (l) => (l.agencias || []).map((a) =>
-      `${comNome(a)}: ${num(cobertura(a.voos, l.voos_busca), 1)}% (${a.voos} voos, menor ${num(a.menor, 2)})`).join(" | ")],
+      `${a.rotulo}: ${num(cobertura(a.voos, l.voos_busca), 1)}% (${a.voos} voos, menor ${num(a.menor, 2)})`).join(" | ")],
     ["Busca completa", (l) => (l.busca_completa ? "sim" : "não")],
   ];
 

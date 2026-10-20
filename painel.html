@@ -63,6 +63,8 @@
   .lado.cvc { background: var(--cvc); color: var(--cvc-tinta); }
   .lado.rival { background: var(--decolar); color: var(--decolar-tinta); }
   .lado .rotulo { font-size: 12px; color: inherit; opacity: .85; }
+  /* rotulos de concorrente com a grafia exata ("Concorrente dcl"), sem maiusculas forcadas */
+  .lado.rival .rotulo, .cia-grade .rotulo.rival { text-transform: none; letter-spacing: 0; font-size: 13px; }
   .lado .preco { font-size: clamp(15px, 5.6vw, 22px); font-weight: 800; letter-spacing: -.02em; margin-top: 2px;
                  white-space: nowrap; }
   .lado .nota { font-size: 11px; opacity: .8; }

@@ -69,7 +69,7 @@ function coletando(e) {
   return topo(e) + cabecalhoRota(e.cfg, status("vivo", fase));
 }
 
-// O cartao principal: menor preco da CVC x menor preco do Concorrente 1 (Decolar), lado a
+// O cartao principal: menor preco da CVC x menor preco do Concorrente dcl (Decolar), lado a
 // lado, e a diferenca entre os dois.
 function veredito(d, rival) {
   if (d == null) return "";
@@ -81,7 +81,7 @@ function veredito(d, rival) {
 }
 
 function destaque(e) {
-  const rival = e.rival || "Concorrente 1";
+  const rival = e.rival || "Concorrente dcl";
   const lado = (classe, nome, valor, nota) => `<div class="lado ${classe}">
       <div class="rotulo">${esc(nome)}</div>
       <div class="preco">${valor == null ? "—" : brl(valor)}</div>
@@ -192,7 +192,7 @@ function cia(l, rival) {
     <div class="cia-topo"><span class="cia-nome">${esc(l.cia)}</span>${seloTempo(l)}</div>
     <div class="cia-grade">
       <div><div class="rotulo">CVC</div><div class="valor">${brl(l.menor_agente)}${difer}</div></div>
-      <div><div class="rotulo">${esc(rival)}</div><div class="valor">${brl(l.menor_rival)}</div></div>
+      <div><div class="rotulo rival">${esc(rival)}</div><div class="valor">${brl(l.menor_rival)}</div></div>
     </div>
     <div class="cia-cob"><span class="suave">Cobertura · ${l.voos_busca} voos</span>
       ${barraDupla(l.voos_agente, l.voos_rival || 0, l.voos_busca, rival)}
@@ -302,7 +302,7 @@ function pronto(e) {
   if (!e.busca_completou)
     avisos.push("A busca não chegou a completar — os números podem estar incompletos.");
   if (!e.rival_participa_da_busca)
-    avisos.push(`O ${e.rival || "Concorrente 1"} não aparece entre as agências desta busca.`);
+    avisos.push(`O ${e.rival || "Concorrente dcl"} não aparece entre as agências desta busca.`);
   if (!e.agente_participa_da_busca)
     avisos.push(`O agente ${e.agente} não aparece entre os agentes desta busca.`);
   return topo(e)
@@ -311,7 +311,7 @@ function pronto(e) {
     + destaque(e)
     + kpis(e)
     + `<h2>Por companhia</h2><div class="cartao">${
-        (e.por_cia || []).map((l) => cia(l, e.rival || "Concorrente 1")).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
+        (e.por_cia || []).map((l) => cia(l, e.rival || "Concorrente dcl")).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
     + posicoes(e.posicoes)
     + combinadas(e.combinadas)
     + `<h2>Detalhes</h2>` + log(e);
@@ -355,7 +355,7 @@ function cartaoHistorico() {
   return `<h2>Histórico de buscas</h2><div class="cartao">
     <div class="cobertura-topo"><span><b>${n}</b> busca${n === 1 ? "" : "s"} gravada${n === 1 ? "" : "s"}</span>
       <span class="suave">${desde ? `desde ${esc(desde)}` : "neste navegador"}</span></div>
-    ${n ? `<table class="hist"><thead><tr><th>Rota</th><th>CVC</th><th>Conc. 1</th><th>%</th></tr></thead>
+    ${n ? `<table class="hist"><thead><tr><th>Rota</th><th>CVC</th><th>Conc. dcl</th><th>%</th></tr></thead>
       <tbody>${linhas}</tbody></table>`
         : '<div class="suave">Cada busca analisada vira uma linha aqui.</div>'}
     <div class="botoes-hist">
