@@ -61,8 +61,14 @@ var HIST = (() => {
     ["Voos CVC", (l) => l.voos_cvc],
     ["Voos Decolar", (l) => l.voos_decolar],
     ["Voos na busca", (l) => l.voos_busca],
+    // calculadas na exportacao, entao valem tambem para linhas ja gravadas
+    ["Cobertura CVC %", (l) => num(cobertura(l.voos_cvc, l.voos_busca), 1)],
+    ["Cobertura Decolar %", (l) => num(cobertura(l.voos_decolar, l.voos_busca), 1)],
     ["Busca completa", (l) => (l.busca_completa ? "sim" : "não")],
   ];
+
+  // % dos voos da busca em que a agencia tem oferta; sem total, vazio
+  const cobertura = (n, total) => (n == null || !total ? null : n / total * 100);
 
   const pad = (n) => String(n).padStart(2, "0");
   function dataBr(iso) {

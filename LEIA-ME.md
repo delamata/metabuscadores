@@ -90,7 +90,8 @@ total e as ultimas 5, e tem:
 - **Exportar para Excel** — CSV no padrao do Excel em portugues (`;`, virgula
   decimal, acentos com BOM UTF-8). Colunas: Data da busca, Hora, Site, Rota,
   Data Ida, Data Volta, Adultos, Preco CVC, Preco Decolar, %Variacao, Voos CVC,
-  Voos Decolar, Voos na busca, Busca completa.
+  Voos Decolar, Voos na busca, Cobertura CVC %, Cobertura Decolar % (voos de
+  cada uma sobre os voos da busca, calculada na exportacao) e Busca completa.
 - **Limpar historico** — pede dois cliques.
 
 Regras: %Variacao = (CVC - Decolar) / Decolar (positivo = CVC mais cara), a

@@ -30,7 +30,8 @@ test("sem oferta fica vazio, nunca zero", () => {
   assert.equal(linha[5], "");      // Data Volta
   assert.equal(linha[8], "");      // Preco Decolar
   assert.equal(linha[9], "");      // %Variacao
-  assert.equal(linha[13], "não");  // Busca completa
+  assert.equal(linha[13], "");     // Cobertura CVC: sem total de voos
+  assert.equal(linha[15], "não");  // Busca completa
 });
 
 test("le so as chaves do historico, em ordem de data", () => {
@@ -49,7 +50,7 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
   assert.ok(csv.startsWith("﻿"));
   const [cab, linha] = csv.slice(1).split("\r\n");
   assert.equal(cab, "Data da busca;Hora;Site;Rota;Data Ida;Data Volta;Adultos;Preço CVC;Preço Decolar;"
-    + "%Variação;Voos CVC;Voos Decolar;Voos na busca;Busca completa");
+    + "%Variação;Voos CVC;Voos Decolar;Voos na busca;Cobertura CVC %;Cobertura Decolar %;Busca completa");
   const c = linha.split(";");
   assert.equal(c[2], "Kayak");
   assert.equal(c[3], "SAO-MCZ");
@@ -58,7 +59,9 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
   assert.equal(c[7], "3673,88");
   assert.equal(c[8], "3956,00");
   assert.equal(c[9], "-7,13");
-  assert.equal(c[13], "sim");
+  assert.equal(c[13], "22,6");     // 93 / 412
+  assert.equal(c[14], "89,1");     // 367 / 412
+  assert.equal(c[15], "sim");
 });
 
 test("CSV escapa texto com ponto e virgula ou aspas", () => {
