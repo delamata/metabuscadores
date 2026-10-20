@@ -96,6 +96,10 @@ var HIST = (() => {
     ["CVC no top 10", (l) => l.cvc_top10],
     ["Agências na busca", (l) => (l.agencias ? l.agencias.length : null)],
     // todas as agencias numa celula: "Concorrente dcl: 89,1% (367 voos, menor 3956,00) | ..."
+    // melhor preco de cada agencia, do mais barato para o mais caro:
+    // "Concorrente zpr: 3099,90 | CVC: 3366,34 | ..."
+    ["Melhor preço por concorrente", (l) => (l.agencias || []).filter((a) => a.menor != null)
+      .slice().sort((x, y) => x.menor - y.menor).map((a) => `${a.rotulo}: ${num(a.menor, 2)}`).join(" | ")],
     ["Cobertura por agência", (l) => (l.agencias || []).map((a) =>
       `${a.rotulo}: ${num(cobertura(a.voos, l.voos_busca), 1)}% (${a.voos} voos, menor ${num(a.menor, 2)})`).join(" | ")],
     ["Busca completa", (l) => (l.busca_completa ? "sim" : "não")],

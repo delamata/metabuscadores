@@ -105,6 +105,7 @@ function destaque(e) {
     ${frente}
   </div>
   ${extremos(e)}
+  ${melhoresPrecos(e)}
   ${cobertura(e, rival)}`;
 }
 
@@ -142,6 +143,36 @@ function extremos(e) {
     <div class="cobertura-topo"><span class="rotulo">Preços da busca</span>
       <span class="suave">todas as agências</span></div>
     <div class="extremos">${quadro("Concorrente + Barato", mn)}${quadro("Concorrente + Caro", mx)}</div></div>`;
+}
+
+// Melhor preco de cada concorrente (o menor que ele ofereceu na busca), do
+// mais barato para o mais caro. A CVC entra na lista como referencia e cada
+// concorrente mostra a diferenca sobre o melhor preco da CVC.
+const MAX_PRECOS = 12;
+function melhoresPrecos(e) {
+  const ags = (e.por_agente || []).filter((a) => a.menor != null)
+    .slice().sort((x, y) => x.menor - y.menor);
+  if (!ags.length) return "";
+  const cvc = e.menor_agente;
+  const linhas = ags.slice(0, MAX_PRECOS).map((a, i) => {
+    let difer = "";
+    if (a.cor !== "cvc" && cvc != null) {
+      const d = (cvc - a.menor) / a.menor * 100;   // mesma conta do painel: (CVC - concorrente) / concorrente
+      difer = `<span class="tag ${d <= 0 ? "bom" : "ruim"}" title="CVC em relação a este concorrente">${dif(d)}</span>`;
+    }
+    return `<div class="linha-preco ${a.cor === "cvc" ? "eh-cvc" : ""}">
+      <span class="pos-preco">${i + 1}º</span>${marca(a)}
+      <b class="valor-preco">${brl(a.menor)}</b><span class="dif-preco">${difer}</span></div>`;
+  }).join("");
+  const resto = ags.length > MAX_PRECOS
+    ? `<div class="frente">e mais ${ags.length - MAX_PRECOS} agência(s) — todas vão no Excel</div>` : "";
+  return `<div class="cartao">
+    <div class="cobertura-topo"><span class="rotulo">Melhor preço por concorrente</span>
+      <span class="suave">${ags.length} agências</span></div>
+    ${linhas}
+    <div class="legenda-cob suave">% = CVC acima (+) ou abaixo (−) do melhor preço do concorrente</div>
+    ${resto}
+  </div>`;
 }
 
 // Cobertura por agencia: em quantos dos voos da busca cada uma tem oferta.

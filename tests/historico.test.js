@@ -45,7 +45,7 @@ test("sem oferta fica vazio, nunca zero", () => {
   assert.equal(linha[8], "");      // Preco Decolar
   assert.equal(linha[9], "");      // %Variacao
   assert.equal(linha[13], "");     // Cobertura CVC: sem total de voos
-  assert.equal(linha[29], "não");  // Busca completa
+  assert.equal(linha[30], "não");  // Busca completa
   assert.equal(linha[15], "");     // Preco Concorrente zpr: linha antiga/sem dado
 });
 
@@ -68,7 +68,7 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
     + "%Variação;Voos CVC;Voos Concorrente dcl;Voos na busca;Cobertura CVC %;Cobertura Concorrente dcl %;"
     + "Preço Concorrente zpr;Voos Concorrente zpr;Cobertura Concorrente zpr %;Concorrente + Barato (preço);Concorrente + Barato;"
     + "Concorrente + Caro (preço);Concorrente + Caro;Voos CVC mais barata;Voos Concorrente dcl mais barato;"
-    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Cobertura por agência;Busca completa");
+    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Melhor preço por concorrente;Cobertura por agência;Busca completa");
   const c = linha.split(";");
   assert.equal(c[2], "Kayak");
   assert.equal(c[3], "SAO-MCZ");
@@ -86,12 +86,13 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
   assert.equal(c[20], "9100,00");
   assert.equal(c[21], "Concorrente GTG");
   assert.deepEqual(c.slice(22, 28), ["12", "27", "3", "2", "3", "3"]);
-  assert.equal(c[28], "Concorrente dcl: 89,1% (367 voos, menor 3956,00) | CVC: 22,6% (93 voos, menor 3673,88)"
+  assert.equal(c[29], "Concorrente dcl: 89,1% (367 voos, menor 3956,00) | CVC: 22,6% (93 voos, menor 3673,88)"
     + " | Concorrente zpr: 9,7% (40 voos, menor 3500,00)");
   // so a CVC com nome real no arquivo inteiro
   assert.ok(!/decolar|zupper|gotogate/i.test(csv), "nome de concorrente vazou no CSV");
   assert.equal(c[14], "89,1");     // 367 / 412
-  assert.equal(c[29], "sim");
+  assert.equal(c[28], "Concorrente zpr: 3500,00 | CVC: 3673,88 | Concorrente dcl: 3956,00");
+  assert.equal(c[30], "sim");
 });
 
 test("CSV escapa texto com ponto e virgula ou aspas", () => {

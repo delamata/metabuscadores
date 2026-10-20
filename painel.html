@@ -100,6 +100,14 @@
   .linha-barra.larga { grid-template-columns: 104px 1fr 62px; }
   .num-cob { text-align: right; white-space: nowrap; }
   .legenda-cob { font-size: 10.5px; margin-top: 6px; text-align: right; }
+  .linha-preco { display: grid; grid-template-columns: 26px 118px 1fr 64px; align-items: center; gap: 6px;
+                 padding: 5px 0; border-top: 1px solid var(--linha); font-size: 12.5px; }
+  .linha-preco:first-of-type { border-top: 0; }
+  .linha-preco.eh-cvc { background: color-mix(in srgb, var(--cvc) 14%, transparent); border-radius: 6px; }
+  .pos-preco { color: var(--fraco); font-size: 11px; text-align: right; }
+  .valor-preco { text-align: right; white-space: nowrap; }
+  .dif-preco { text-align: right; }
+  .dif-preco .tag { font-size: 11px; padding: 1px 6px; }
   .extremos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .extremo { border-radius: 10px; padding: 10px; text-align: center; background: var(--fundo);
              border: 1px solid var(--linha); }
