@@ -236,16 +236,16 @@ test("todas as agencias, menor/maior da busca e apelidos", () => {
   assert.deepEqual(r.menor_geral.agencias.map((a) => a.nome), ["Zupper", "Gotogate"]);   // empate
   assert.equal(r.maior_geral.valor, 1900);
   assert.deepEqual(r.maior_geral.agencias.map((a) => a.nome), ["Gotogate"]);
-  const APELIDOS = [{ re: /decolar/i, sufixo: "dcl", cor: "rival" },
-                    { re: /zupper/i, sufixo: "zpr", cor: "tiffany" },
+  const APELIDOS = [{ re: /decolar/i, sufixo: "DCL", cor: "rival" },
+                    { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
                     { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" }];
   const mapa = CVC.rotulosDaBusca(r.por_agente, "cvc_", APELIDOS);
   const rot = CVC.rotulaTodas(r.por_agente, mapa);
   assert.deepEqual(rot.map((a) => [a.rotulo, a.cor]),
-    [["Concorrente dcl", "rival"], ["Concorrente GTG", null], ["CVC", "cvc"], ["Concorrente zpr", "tiffany"]]);
+    [["Player - DCL", "rival"], ["Player - GTG", null], ["CVC", "cvc"], ["Player - ZPR", "tiffany"]]);
   // o mesmo rotulo em qualquer lista da mesma busca
-  assert.deepEqual(CVC.rotulaTodas(r.menor_geral.agencias, mapa).map((a) => a.rotulo), ["Concorrente zpr", "Concorrente GTG"]);
-  assert.deepEqual(CVC.rotulaTodas(r.maior_geral.agencias, mapa).map((a) => a.rotulo), ["Concorrente GTG"]);
+  assert.deepEqual(CVC.rotulaTodas(r.menor_geral.agencias, mapa).map((a) => a.rotulo), ["Player - ZPR", "Player - GTG"]);
+  assert.deepEqual(CVC.rotulaTodas(r.maior_geral.agencias, mapa).map((a) => a.rotulo), ["Player - GTG"]);
 });
 
 test("sufixo: a regra reproduz os exemplos e nao expoe o nome", () => {
@@ -258,12 +258,12 @@ test("so a CVC com nome real; sufixo fixo vence o derivado; colisao ganha numero
   const ags = [{ id: "dec", nome: "Decolar" }, { id: "mm", nome: "MaxMilhas" }, { id: "cvc_", nome: "CVC Viagens" },
                { id: "z", nome: "Zupper" }, { id: "g3", nome: "GOL" }, { id: "m1", nome: "Milhas Shop" },
                { id: "m2", nome: "Mil Has Club" }];
-  const AP = [{ re: /decolar/i, sufixo: "dcl", cor: "rival" }, { re: /zupper/i, sufixo: "zpr", cor: "tiffany" },
+  const AP = [{ re: /decolar/i, sufixo: "DCL", cor: "rival" }, { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
               { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" }, { re: /123\s*milhas/i, sufixo: "MLS" },
               { re: /\bgol\b/i, cor: "gol" }];
   const m = CVC.rotulosDaBusca(ags, "cvc_", AP);
   assert.deepEqual([...m.values()].map((v) => `${v.rotulo}/${v.cor}`),
-    ["Concorrente dcl/rival", "Concorrente MXM/maxmilhas", "CVC/cvc", "Concorrente zpr/tiffany",
-     "Concorrente GLO/gol", "Concorrente MLS2/null", "Concorrente MLS3/null"]);
+    ["Player - DCL/rival", "Player - MXM/maxmilhas", "CVC/cvc", "Player - ZPR/tiffany",
+     "Player - GLO/gol", "Player - MLS2/null", "Player - MLS3/null"]);
   for (const v of m.values()) assert.ok(!/decolar|zupper|milhas|gol/i.test(v.rotulo), v.rotulo);
 });

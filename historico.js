@@ -34,7 +34,7 @@ var HIST = (() => {
       agencia_menor: rotulos((res.menor_geral || {}).agencias),
       maior_busca: (res.maior_geral || {}).valor ?? null,
       agencia_maior: rotulos((res.maior_geral || {}).agencias),
-      // frente a frente CVC x Concorrente dcl nos voos que os dois vendem
+      // frente a frente CVC x Player - DCL nos voos que os dois vendem
       frente_cvc: (res.frente_a_frente || {}).cvc ?? null,
       frente_rival: (res.frente_a_frente || {}).rival ?? null,
       frente_empate: (res.frente_a_frente || {}).empate ?? null,
@@ -46,19 +46,29 @@ var HIST = (() => {
   }
 
   // So a CVC com nome real, tambem no Excel: os concorrentes saem pelo rotulo
-  // ("Concorrente MXM"), que e fixo por agencia e permite comparar linhas.
+  // ("Player - MXM"), que e fixo por agencia e permite comparar linhas.
   const rotulos = (ags) => ((ags && ags.length) ? ags.map((a) => a.rotulo || a.nome).join(", ") : null);
-  const zpr = (l) => (l.agencias || []).find((a) => a.rotulo === "Concorrente zpr") || {};
+  const zpr = (l) => (l.agencias || []).find((a) => a.rotulo === "Player - ZPR") || {};
 
   function chaveNova(quando) {
     return `${PREFIXO}${(quando || new Date()).toISOString()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  // Linhas gravadas pela v0.13.0 usam "Concorrente dcl"; o padrao agora e
+  // "Player - DCL". Converte na leitura para o Excel nao misturar os dois.
+  const RE_ANTIGO = /\bConcorrente (?!\+)([A-Za-z]{3}\d*)\b/g;
+  const atualiza = (t) => (typeof t === "string" ? t.replace(RE_ANTIGO, (m, suf) => `Player - ${suf.toUpperCase()}`) : t);
+  function normaliza(l) {
+    const n = Object.assign({}, l, { agencia_menor: atualiza(l.agencia_menor), agencia_maior: atualiza(l.agencia_maior) });
+    if (Array.isArray(l.agencias)) n.agencias = l.agencias.map((a) => Object.assign({}, a, { rotulo: atualiza(a.rotulo) }));
+    return n;
   }
 
   // Todas as linhas guardadas, da mais antiga para a mais nova.
   function deStorage(tudo) {
     return Object.entries(tudo || {})
       .filter(([k]) => k.startsWith(PREFIXO))
-      .map(([k, v]) => Object.assign({ chave: k }, v))
+      .map(([k, v]) => normaliza(Object.assign({ chave: k }, v)))
       .sort((a, b) => (a.quando < b.quando ? -1 : a.quando > b.quando ? 1 : 0));
   }
 
@@ -74,30 +84,30 @@ var HIST = (() => {
     ["Data Volta", (l) => isoParaBr(l.volta)],
     ["Adultos", (l) => l.adultos],
     ["Preço CVC", (l) => num(l.preco_cvc, 2)],
-    ["Preço Concorrente dcl", (l) => num(l.preco_decolar, 2)],
+    ["Preço Player - DCL", (l) => num(l.preco_decolar, 2)],
     ["%Variação", (l) => num(l.variacao_pct, 2)],
     ["Voos CVC", (l) => l.voos_cvc],
-    ["Voos Concorrente dcl", (l) => l.voos_decolar],
+    ["Voos Player - DCL", (l) => l.voos_decolar],
     ["Voos na busca", (l) => l.voos_busca],
     // calculadas na exportacao, entao valem tambem para linhas ja gravadas
     ["Cobertura CVC %", (l) => num(cobertura(l.voos_cvc, l.voos_busca), 1)],
-    ["Cobertura Concorrente dcl %", (l) => num(cobertura(l.voos_decolar, l.voos_busca), 1)],
-    ["Preço Concorrente zpr", (l) => num(zpr(l).menor, 2)],
-    ["Voos Concorrente zpr", (l) => zpr(l).voos],
-    ["Cobertura Concorrente zpr %", (l) => num(cobertura(zpr(l).voos, l.voos_busca), 1)],
+    ["Cobertura Player - DCL %", (l) => num(cobertura(l.voos_decolar, l.voos_busca), 1)],
+    ["Preço Player - ZPR", (l) => num(zpr(l).menor, 2)],
+    ["Voos Player - ZPR", (l) => zpr(l).voos],
+    ["Cobertura Player - ZPR %", (l) => num(cobertura(zpr(l).voos, l.voos_busca), 1)],
     ["Concorrente + Barato (preço)", (l) => num(l.menor_busca, 2)],
     ["Concorrente + Barato", (l) => l.agencia_menor],
     ["Concorrente + Caro (preço)", (l) => num(l.maior_busca, 2)],
     ["Concorrente + Caro", (l) => l.agencia_maior],
     ["Voos CVC mais barata", (l) => l.frente_cvc],
-    ["Voos Concorrente dcl mais barato", (l) => l.frente_rival],
+    ["Voos Player - DCL mais barato", (l) => l.frente_rival],
     ["Voos empatados", (l) => l.frente_empate],
     ["1ª posição CVC", (l) => l.primeira_posicao],
     ["CVC no top 10", (l) => l.cvc_top10],
     ["Agências na busca", (l) => (l.agencias ? l.agencias.length : null)],
-    // todas as agencias numa celula: "Concorrente dcl: 89,1% (367 voos, menor 3956,00) | ..."
+    // todas as agencias numa celula: "Player - DCL: 89,1% (367 voos, menor 3956,00) | ..."
     // melhor preco de cada agencia, do mais barato para o mais caro:
-    // "Concorrente zpr: 3099,90 | CVC: 3366,34 | ..."
+    // "Player - ZPR: 3099,90 | CVC: 3366,34 | ..."
     ["Melhor preço por concorrente", (l) => (l.agencias || []).filter((a) => a.menor != null)
       .slice().sort((x, y) => x.menor - y.menor).map((a) => `${a.rotulo}: ${num(a.menor, 2)}`).join(" | ")],
     ["Cobertura por agência", (l) => (l.agencias || []).map((a) =>

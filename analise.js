@@ -228,9 +228,9 @@ var CVC = (() => {
   }
 
   // ---- rotulos das agencias ---------------------------------------------- #
-  // So a CVC aparece com o nome real. Cada concorrente vira "Concorrente " +
-  // um sufixo de 3 letras que nao expoe o nome: fixo no apelido (Decolar=dcl,
-  // Zupper=zpr, MaxMilhas=MXM, 123milhas=MLS) ou derivado pela mesma regra
+  // So a CVC aparece com o nome real. Cada concorrente vira "Player - " + um
+  // sufixo de 3 letras maiusculas que nao expoe o nome: fixo no apelido
+  // (Decolar=DCL, Zupper=ZPR, MaxMilhas=MXM, 123milhas=MLS) ou derivado pela mesma regra
   // desses exemplos (sufixoDe). O mapa e montado UMA vez por busca, para a
   // mesma agencia ter o mesmo rotulo em todo o painel. `cor` (de qualquer
   // apelido que bata) diz ao painel como pintar.
@@ -247,6 +247,8 @@ var CVC = (() => {
     return suf || "XXX";
   }
 
+  const PREFIXO_PLAYER = "Player - ";
+
   function rotulosDaBusca(porAgente, agente, apelidos) {
     const mapa = new Map();
     const usados = new Set((apelidos || []).filter((x) => x.sufixo).map((x) => x.sufixo.toUpperCase()));
@@ -261,7 +263,7 @@ var CVC = (() => {
         for (let k = 2; usados.has(suf.toUpperCase()); k++) suf = `${base}${k}`;
         usados.add(suf.toUpperCase());
       }
-      mapa.set(ag.id, { rotulo: `Concorrente ${suf}`, cor: ap.cor || null });
+      mapa.set(ag.id, { rotulo: `${PREFIXO_PLAYER}${suf.toUpperCase()}`, cor: ap.cor || null });
     }
     return mapa;
   }

@@ -6,14 +6,14 @@
 const AGENTE = "cvc_";
 // Com quem a CVC e comparada: localizada pelo nome ou id do agente. O `nome`
 // e o que aparece no painel e no Excel.
-const RIVAL = { nome: "Concorrente dcl", re: /decolar/i };
+const RIVAL = { nome: "Player - DCL", re: /decolar/i };
 // Rotulos e cores das agencias (ver CVC.rotulosDaBusca). So a CVC aparece com
-// o nome real; cada concorrente vira "Concorrente <sufixo>". `sufixo` fixa o
+// o nome real; cada concorrente vira "Player - <SUFIXO>". `sufixo` fixa o
 // sufixo (os demais sao derivados do nome); `cor` e a classe CSS da marca
 // (cores no topo do painel.html).
 const APELIDOS = [
-  { re: /decolar/i, sufixo: "dcl", cor: "rival" },
-  { re: /zupper/i, sufixo: "zpr", cor: "tiffany" },
+  { re: /decolar/i, sufixo: "DCL", cor: "rival" },
+  { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
   { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" },
   { re: /123\s*milhas/i, sufixo: "MLS", cor: "milhas123" },
   { re: /\bgol\b|voegol/i, cor: "gol" },
