@@ -38,12 +38,12 @@ mostra de qual site veio a busca.
 
 ## O que o painel mostra
 
-**So a CVC aparece com o nome real.** Cada concorrente vira "Concorrente " +
-um sufixo que nao expoe o nome (ver abaixo).
+**So a CVC aparece com o nome real.** Cada concorrente vira "Player - " + um
+sufixo em maiusculas que nao expoe o nome (ver abaixo).
 
-1. **CVC x Concorrente dcl** (Decolar) — no topo, lado a lado: o menor preco
-   da CVC e o do Concorrente dcl na busca, e a diferenca em % ("CVC 1,6% mais
-   barata que o Concorrente dcl"). A % e sobre o preco do concorrente:
+1. **CVC x Player - DCL** (Decolar) — no topo, lado a lado: o menor preco
+   da CVC e o do Player - DCL na busca, e a diferenca em % ("CVC 1,6% mais
+   barata que o Player - DCL"). A % e sobre o preco do concorrente:
    `(CVC - concorrente) / concorrente`. Logo abaixo, o **frente a frente**: nos
    voos que os dois vendem, em quantos cada um e mais barato.
 2. **Precos da busca** — **Concorrente + Barato** e **Concorrente + Caro**: o
@@ -56,7 +56,7 @@ um sufixo que nao expoe o nome (ver abaixo).
    oferta, e quantos voos.
 5. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
    no top 10 de Recomendados.
-6. **Por companhia** — menor preco CVC x Concorrente dcl, a diferenca em %, a
+6. **Por companhia** — menor preco CVC x Player - DCL, a diferenca em %, a
    cobertura dos dois e o selo de tempo da fonte no ConectaAS (vermelho quando
    deu timeout). As companhias aereas (LATAM, GOL, Azul...) aparecem pelo nome.
 7. **Posicoes**, **combinacoes de companhias**, **historico** e, recolhidos, o
@@ -69,16 +69,18 @@ Tudo em `APELIDOS`, no topo do `coletor.js`, e `CVC.rotulosDaBusca` /
 
 | agencia | rotulo | cor |
 |---|---|---|
-| Decolar | Concorrente dcl | roxo |
-| Zupper | Concorrente zpr | azul Tiffany |
-| MaxMilhas | Concorrente MXM | verde |
-| 123milhas | Concorrente MLS | azul-marinho |
-| GOL | Concorrente GLO | laranja |
-| LATAM | Concorrente LTM | vermelho |
-| Azul | Concorrente ZLA | azul |
-| demais | Concorrente + sufixo derivado | cinza |
+| Decolar | Player - DCL | roxo |
+| Zupper | Player - ZPR | azul Tiffany |
+| MaxMilhas | Player - MXM | verde |
+| 123milhas | Player - MLS | azul-marinho |
+| GOL | Player - GLO | laranja |
+| LATAM | Player - LTM | vermelho |
+| Azul | Player - ZLA | azul |
+| demais | Player - + sufixo derivado | cinza |
 
-Sufixo derivado (mesma regra dos fixos): as 3 primeiras consoantes do nome,
+Rotulo: "Player - " + sufixo sempre em maiusculas. Linhas do historico
+gravadas com o rotulo antigo ("Concorrente dcl", v0.13.0) sao convertidas na
+leitura. Sufixo derivado (mesma regra dos fixos): as 3 primeiras consoantes do nome,
 ignorando digitos e "h", sem repetir letra seguida; com menos de 3 consoantes,
 completa com as vogais (GOL -> GLO). Colisao ganha numero (MLS2). Como depende
 so do nome, a mesma agencia tem sempre o mesmo rotulo — em qualquer busca e no
@@ -120,17 +122,18 @@ total e as ultimas 5, e tem:
 - **Exportar para Excel** — CSV no padrao do Excel em portugues (`;`, virgula
   decimal, acentos com BOM UTF-8), **sem nome real de concorrente**. Colunas:
   Data da busca, Hora, Site, Rota, Data Ida, Data Volta, Adultos, Preco CVC,
-  Preco Concorrente dcl, %Variacao, Voos CVC, Voos Concorrente dcl, Voos na
-  busca, Cobertura CVC %, Cobertura Concorrente dcl %, Preco/Voos/Cobertura
-  Concorrente zpr, Concorrente + Barato (preco e quem), Concorrente + Caro
-  (preco e quem), frente a frente (voos CVC mais barata, Concorrente dcl mais
+  Preco Player - DCL, %Variacao, Voos CVC, Voos Player - DCL, Voos na
+  busca, Cobertura CVC %, Cobertura Player - DCL %, Preco/Voos/Cobertura
+  Player - ZPR, Concorrente + Barato (preco e quem), Concorrente + Caro
+  (preco e quem), frente a frente (voos CVC mais barata, Player - DCL mais
   barato, empatados), 1a posicao CVC, CVC no top 10, Agencias na busca, Melhor
   preco por concorrente, Cobertura por agencia e Busca completa. Coberturas sao
   calculadas na exportacao; buscas gravadas antes desta versao saem com as
   colunas novas vazias.
 - **Limpar historico** — pede dois cliques.
 
-Regras: %Variacao = (CVC - Concorrente dcl) / Concorrente dcl (positivo = CVC mais cara), a
+Regras: %Variacao = (preco CVC menos preco Player - DCL) dividido pelo preco Player - DCL
+(positivo = CVC mais cara), a
 mesma do painel. Sem oferta de uma das duas, o preco e a % ficam **vazios**,
 nunca zero. A mesma rota buscada duas vezes gera duas linhas, cada uma com sua
 hora. O historico e de cada pessoa/navegador: para juntar o de varias pessoas,
