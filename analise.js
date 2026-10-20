@@ -228,44 +228,72 @@ var CVC = (() => {
   }
 
   // ---- rotulos das agencias ---------------------------------------------- #
-  // So a CVC aparece com o nome real. Cada concorrente vira "Player - " + um
-  // sufixo de 3 letras maiusculas que nao expoe o nome: fixo no apelido
-  // (Decolar=DCL, Zupper=ZPR, MaxMilhas=MXM, 123milhas=MLS) ou derivado pela mesma regra
-  // desses exemplos (sufixoDe). O mapa e montado UMA vez por busca, para a
-  // mesma agencia ter o mesmo rotulo em todo o painel. `cor` (de qualquer
-  // apelido que bata) diz ao painel como pintar.
+  // So a CVC aparece com o nome real. Cada concorrente vira "Player N", com
+  // numero FIXO por agencia: o mesmo em qualquer busca, em qualquer
+  // computador e no Excel. A Decolar e sempre o Player 1.
+  //
+  // AGENCIAS e o catalogo: `re` reconhece a agencia pelo nome/id, `numero` e
+  // o Player, `cor` a classe CSS da marca (cores no painel.html), `antigo` o
+  // sufixo usado ate a v0.14.0 ("Player - DCL"), para converter o historico.
+  const AGENCIAS = [
+    { re: /decolar/i, numero: 1, cor: "rival", antigo: "DCL" },
+    { re: /zupper/i, numero: 2, cor: "tiffany", antigo: "ZPR" },
+    { re: /max\s*milhas/i, numero: 3, cor: "maxmilhas", antigo: "MXM" },
+    { re: /123\s*milhas/i, numero: 4, cor: "milhas123", antigo: "MLS" },
+    { re: /vai\s*de\s*promo/i, numero: 5, antigo: "VDP" },
+    { re: /\btrip\.com\b/i, numero: 6, antigo: "TRP" },
+    { re: /viaja\s*net/i, numero: 7, antigo: "VJN" },
+    { re: /booking/i, numero: 8, antigo: "BKN" },
+    { re: /azul/i, numero: 9, cor: "azulcia", antigo: "ZLA" },
+    { re: /\bgol\b|voegol/i, numero: 10, cor: "gol", antigo: "GLO" },
+    { re: /latam/i, numero: 11, cor: "latam", antigo: "LTM" },
+    { re: /gotogate/i, numero: 12, antigo: "GTG" },
+    { re: /mytrip/i, numero: 13, antigo: "MYT" },
+    { re: /kiwi/i, numero: 14, antigo: "KWC" },
+    { re: /submarino/i, numero: 15, antigo: "SBM" },
+    { re: /edreams/i, numero: 16, antigo: "DRM" },
+    { re: /expedia/i, numero: 17, antigo: "XPD" },
+    { re: /smiles/i, numero: 18, antigo: "SML" },
+    { re: /passagens\s*promo/i, numero: 19, antigo: "PSG" },
+    { re: /hurb/i, numero: 20, antigo: "RBU" },
+    { re: /kissandfly/i, numero: 21, antigo: "KSN" },
+    { re: /voopter/i, numero: 22, antigo: "VPT" },
+    { re: /edestinos/i, numero: 23, antigo: "DST" },
+  ];
 
-  // A regra dos exemplos: as 3 primeiras consoantes do nome, ignorando
-  // digitos e "h" (MilHas -> MLS) e sem repetir letra seguida (ZuPPer -> zpr).
-  // Com menos de 3 consoantes, completa com as vogais na ordem (GOL -> GLO).
-  function sufixoDe(nome) {
-    const letras = String(nome || "").normalize("NFD").replace(/[^a-z]/gi, "").toUpperCase();
-    const cons = [];
-    for (const c of letras.replace(/[AEIOUH]/g, "")) if (cons[cons.length - 1] !== c) cons.push(c);
-    let suf = cons.slice(0, 3).join("");
-    for (const v of letras.replace(/[^AEIOU]/g, "")) { if (suf.length >= 3) break; suf += v; }
-    return suf || "XXX";
-  }
+  // Chave de uma agencia fora do catalogo no registro do navegador.
+  const chaveAgencia = (nome) => String(nome || "").normalize("NFD").replace(/[^a-z0-9]/gi, "").toLowerCase();
 
-  const PREFIXO_PLAYER = "Player - ";
-
-  function rotulosDaBusca(porAgente, agente, apelidos) {
+  // Mapa id -> { rotulo, cor, numero } da busca. Agencia fora do catalogo
+  // recebe o proximo numero livre e fica no `registro` ({ chave: numero }),
+  // que o coletor guarda no navegador: dali em diante, sempre o mesmo numero.
+  // O registro e alterado no lugar.
+  function rotulosDaBusca(porAgente, agente, catalogo, registro) {
+    const cat = catalogo || AGENCIAS, reg = registro || {};
     const mapa = new Map();
-    const usados = new Set((apelidos || []).filter((x) => x.sufixo).map((x) => x.sufixo.toUpperCase()));
+    let proximo = Math.max(0, ...cat.map((a) => a.numero || 0), ...Object.values(reg)) + 1;
     for (const ag of porAgente || []) {
-      if (ag.id === agente) { mapa.set(ag.id, { rotulo: "CVC", cor: "cvc" }); continue; }
-      const ap = (apelidos || []).find((x) => x.re.test(ag.nome || "") || x.re.test(ag.id || "")) || {};
-      let suf = ap.sufixo;
-      if (!suf) {
-        // derivado: se colidir com outro, ganha um numero (MLS, MLS2...)
-        const base = sufixoDe(ag.nome || ag.id);
-        suf = base;
-        for (let k = 2; usados.has(suf.toUpperCase()); k++) suf = `${base}${k}`;
-        usados.add(suf.toUpperCase());
+      if (ag.id === agente) { mapa.set(ag.id, { rotulo: "CVC", cor: "cvc", numero: 0 }); continue; }
+      const ap = cat.find((x) => x.re.test(ag.nome || "") || x.re.test(ag.id || "")) || {};
+      let n = ap.numero;
+      if (!n) {
+        const k = chaveAgencia(ag.nome || ag.id);
+        n = reg[k] || (reg[k] = proximo++);
       }
-      mapa.set(ag.id, { rotulo: `${PREFIXO_PLAYER}${suf.toUpperCase()}`, cor: ap.cor || null });
+      mapa.set(ag.id, { rotulo: `Player ${n}`, cor: ap.cor || null, numero: n });
     }
     return mapa;
+  }
+
+  // Rotulo antigo ("Player - DCL" da v0.14.0, "Concorrente dcl" da v0.13.0)
+  // -> rotulo atual ("Player 1"). Sufixo fora do catalogo fica como esta.
+  const RE_ANTIGO = /\b(?:Player - |Concorrente (?!\+))([A-Za-z]{3})\b/g;
+  function rotuloAtual(texto) {
+    if (typeof texto !== "string") return texto;
+    return texto.replace(RE_ANTIGO, (m, suf) => {
+      const a = AGENCIAS.find((x) => x.antigo === suf.toUpperCase());
+      return a ? `Player ${a.numero}` : m;
+    });
   }
   const rotulaTodas = (lista, mapa) =>
     (lista || []).map((ag) => Object.assign({}, ag, mapa.get(ag.id) || { rotulo: ag.nome || ag.id, cor: null }));
@@ -611,7 +639,7 @@ var CVC = (() => {
 
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
-           SITES, siteDaUrl, doKayak, rotulosDaBusca, rotulaTodas, sufixoDe,
+           SITES, siteDaUrl, doKayak, AGENCIAS, rotulosDaBusca, rotulaTodas, rotuloAtual,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();

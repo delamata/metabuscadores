@@ -236,34 +236,42 @@ test("todas as agencias, menor/maior da busca e apelidos", () => {
   assert.deepEqual(r.menor_geral.agencias.map((a) => a.nome), ["Zupper", "Gotogate"]);   // empate
   assert.equal(r.maior_geral.valor, 1900);
   assert.deepEqual(r.maior_geral.agencias.map((a) => a.nome), ["Gotogate"]);
-  const APELIDOS = [{ re: /decolar/i, sufixo: "DCL", cor: "rival" },
-                    { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
-                    { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" }];
-  const mapa = CVC.rotulosDaBusca(r.por_agente, "cvc_", APELIDOS);
+  const reg = {};
+  const mapa = CVC.rotulosDaBusca(r.por_agente, "cvc_", CVC.AGENCIAS, reg);
   const rot = CVC.rotulaTodas(r.por_agente, mapa);
   assert.deepEqual(rot.map((a) => [a.rotulo, a.cor]),
-    [["Player - DCL", "rival"], ["Player - GTG", null], ["CVC", "cvc"], ["Player - ZPR", "tiffany"]]);
+    [["Player 1", "rival"], ["Player 12", null], ["CVC", "cvc"], ["Player 2", "tiffany"]]);
   // o mesmo rotulo em qualquer lista da mesma busca
-  assert.deepEqual(CVC.rotulaTodas(r.menor_geral.agencias, mapa).map((a) => a.rotulo), ["Player - ZPR", "Player - GTG"]);
-  assert.deepEqual(CVC.rotulaTodas(r.maior_geral.agencias, mapa).map((a) => a.rotulo), ["Player - GTG"]);
+  assert.deepEqual(CVC.rotulaTodas(r.menor_geral.agencias, mapa).map((a) => a.rotulo), ["Player 2", "Player 12"]);
+  assert.deepEqual(CVC.rotulaTodas(r.maior_geral.agencias, mapa).map((a) => a.rotulo), ["Player 12"]);
+  assert.deepEqual(reg, {});   // todas do catalogo: nada novo no registro
 });
 
-test("sufixo: a regra reproduz os exemplos e nao expoe o nome", () => {
-  const casos = { Decolar: "DCL", Zupper: "ZPR", "Max Milhas": "MXM", MaxMilhas: "MXM", "123milhas": "MLS",
-                  "123Milhas": "MLS", LATAM: "LTM", GOL: "GLO", Gotogate: "GTG", ViajaNet: "VJN", "Trip.com": "TRP" };
-  for (const [nome, suf] of Object.entries(casos)) assert.equal(CVC.sufixoDe(nome), suf, nome);
-});
-
-test("so a CVC com nome real; sufixo fixo vence o derivado; colisao ganha numero", () => {
-  const ags = [{ id: "dec", nome: "Decolar" }, { id: "mm", nome: "MaxMilhas" }, { id: "cvc_", nome: "CVC Viagens" },
-               { id: "z", nome: "Zupper" }, { id: "g3", nome: "GOL" }, { id: "m1", nome: "Milhas Shop" },
-               { id: "m2", nome: "Mil Has Club" }];
-  const AP = [{ re: /decolar/i, sufixo: "DCL", cor: "rival" }, { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
-              { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" }, { re: /123\s*milhas/i, sufixo: "MLS" },
-              { re: /\bgol\b/i, cor: "gol" }];
-  const m = CVC.rotulosDaBusca(ags, "cvc_", AP);
+test("Player N fixo pelo catalogo; Decolar e o Player 1; so a CVC com nome real", () => {
+  const ags = [{ id: "z", nome: "Zupper" }, { id: "cvc_", nome: "CVC Viagens" }, { id: "dec", nome: "Decolar" },
+               { id: "g3", nome: "GOL" }, { id: "mm", nome: "Max Milhas" }, { id: "b", nome: "123milhas" }];
+  const m = CVC.rotulosDaBusca(ags, "cvc_", CVC.AGENCIAS, {});
   assert.deepEqual([...m.values()].map((v) => `${v.rotulo}/${v.cor}`),
-    ["Player - DCL/rival", "Player - MXM/maxmilhas", "CVC/cvc", "Player - ZPR/tiffany",
-     "Player - GLO/gol", "Player - MLS2/null", "Player - MLS3/null"]);
+    ["Player 2/tiffany", "CVC/cvc", "Player 1/rival", "Player 10/gol", "Player 3/maxmilhas", "Player 4/milhas123"]);
   for (const v of m.values()) assert.ok(!/decolar|zupper|milhas|gol/i.test(v.rotulo), v.rotulo);
+});
+
+test("agencia fora do catalogo ganha o proximo numero e o mantem nas buscas seguintes", () => {
+  const reg = {};
+  const b1 = CVC.rotulosDaBusca([{ id: "x", nome: "Nova Agencia" }, { id: "y", nome: "Outra" }], "cvc_", CVC.AGENCIAS, reg);
+  assert.deepEqual([...b1.values()].map((v) => v.rotulo), ["Player 24", "Player 25"]);
+  assert.deepEqual(reg, { novaagencia: 24, outra: 25 });
+  // outra busca, outra ordem, outro id: mesmo numero pelo nome
+  const b2 = CVC.rotulosDaBusca([{ id: "k", nome: "Outra" }, { id: "w", nome: "Terceira" }, { id: "j", nome: "Nova Agência" }],
+    "cvc_", CVC.AGENCIAS, reg);
+  assert.deepEqual([...b2.values()].map((v) => v.rotulo), ["Player 25", "Player 26", "Player 24"]);
+});
+
+test("rotulos antigos viram Player N", () => {
+  assert.equal(CVC.rotuloAtual("Player - DCL"), "Player 1");
+  assert.equal(CVC.rotuloAtual("Concorrente zpr"), "Player 2");
+  assert.equal(CVC.rotuloAtual("Player - MXM, Player - GLO"), "Player 3, Player 10");
+  assert.equal(CVC.rotuloAtual("Player - QQQ"), "Player - QQQ");     // fora do catalogo: fica
+  assert.equal(CVC.rotuloAtual("Concorrente + Barato"), "Concorrente + Barato");
+  assert.equal(CVC.rotuloAtual("CVC"), "CVC");
 });

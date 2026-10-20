@@ -6,20 +6,9 @@
 const AGENTE = "cvc_";
 // Com quem a CVC e comparada: localizada pelo nome ou id do agente. O `nome`
 // e o que aparece no painel e no Excel.
-const RIVAL = { nome: "Player - DCL", re: /decolar/i };
-// Rotulos e cores das agencias (ver CVC.rotulosDaBusca). So a CVC aparece com
-// o nome real; cada concorrente vira "Player - <SUFIXO>". `sufixo` fixa o
-// sufixo (os demais sao derivados do nome); `cor` e a classe CSS da marca
-// (cores no topo do painel.html).
-const APELIDOS = [
-  { re: /decolar/i, sufixo: "DCL", cor: "rival" },
-  { re: /zupper/i, sufixo: "ZPR", cor: "tiffany" },
-  { re: /max\s*milhas/i, sufixo: "MXM", cor: "maxmilhas" },
-  { re: /123\s*milhas/i, sufixo: "MLS", cor: "milhas123" },
-  { re: /\bgol\b|voegol/i, cor: "gol" },
-  { re: /latam/i, cor: "latam" },
-  { re: /azul/i, cor: "azulcia" },
-];
+const RIVAL = { nome: "Player 1", re: /decolar/i };
+// Rotulos ("Player N") e cores das agencias: catalogo CVC.AGENCIAS no
+// analise.js. Agencias novas recebem numero no registro "players" do navegador.
 // Reconhece o site ao entrar (Skyscanner ou Kayak). O payload e o mesmo nos
 // dois; o site so muda a leitura da rota na URL e o rotulo no painel.
 const SITE = CVC.siteDaUrl(location.href);
@@ -306,7 +295,13 @@ async function fecha() {
     linha.fonte_timeout = r.fonte_timeout ?? null;
   }
 
-  const rotulos = CVC.rotulosDaBusca(res.por_agente, AGENTE, APELIDOS);
+  let registro = {};
+  try { registro = (await chrome.storage.local.get("players")).players || {}; } catch (e) { /* segue vazio */ }
+  const antes = JSON.stringify(registro);
+  const rotulos = CVC.rotulosDaBusca(res.por_agente, AGENTE, CVC.AGENCIAS, registro);
+  if (JSON.stringify(registro) !== antes) {
+    try { chrome.storage.local.set({ players: registro }).catch(() => {}); } catch (e) { /* extensao recarregada */ }
+  }
   ultimoResultado = {
     estado: "pronto",
     quando: new Date().toLocaleTimeString("pt-BR"),
