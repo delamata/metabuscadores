@@ -116,7 +116,9 @@ novos na analise e **ainda nao existem no Python** (`robo_cia_skyscanner.py`);
 os numeros que ja existiam nao mudaram.
 
 O icone fica em `icones/` (`icone.svg` e a fonte; os PNG 16/32/48/128 sao
-gerados dele — o de 16 px sai sem o selo laranja, que nesse tamanho vira borrao).
+gerados dele). Identidade da CVC: lupa e aviao em azul-marinho sobre o amarelo,
+com um selo de barras de comparacao — o de 16 px sai sem o selo, que nesse
+tamanho vira borrao. Desenho proprio, sem o logotipo da marca.
 
 **Nao precisa de servidor local.** A analise roda em `analise.js` e o log do
 ConectaAS e consultado pelo service worker (`host_permissions` no proxy
