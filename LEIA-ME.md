@@ -38,33 +38,63 @@ mostra de qual site veio a busca.
 
 ## O que o painel mostra
 
-1. **CVC x Decolar** — no topo, lado a lado: o menor preco da CVC e o menor
-   preco da Decolar na busca, e a diferenca em % ("CVC 6,7% mais cara que a
-   Decolar"). A % e sobre o preco da Decolar: `(CVC - Decolar) / Decolar`.
-   Logo abaixo, o **frente a frente**: nos voos que as duas vendem, em quantos
-   cada uma e mais barata.
-2. **Cobertura CVC x Decolar** — em quantos dos voos da busca cada uma tem
-   oferta, em barras lado a lado, com a quantidade de voos de cada uma.
-3. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
+**So a CVC aparece com o nome real.** Cada concorrente vira "Concorrente " +
+um sufixo que nao expoe o nome (ver abaixo).
+
+1. **CVC x Concorrente dcl** (Decolar) — no topo, lado a lado: o menor preco
+   da CVC e o do Concorrente dcl na busca, e a diferenca em % ("CVC 1,6% mais
+   barata que o Concorrente dcl"). A % e sobre o preco do concorrente:
+   `(CVC - concorrente) / concorrente`. Logo abaixo, o **frente a frente**: nos
+   voos que os dois vendem, em quantos cada um e mais barato.
+2. **Precos da busca** — **Concorrente + Barato** e **Concorrente + Caro**: o
+   menor e o maior preco da busca inteira, de qualquer agencia, com quem
+   ofereceu. O quadro ganha a cor da marca da agencia.
+3. **Melhor preco por concorrente** — o menor preco de cada agencia, do mais
+   barato ao mais caro, com a CVC destacada na lista e a % da CVC sobre cada
+   concorrente (mesma conta do item 1; + vermelho = CVC mais cara).
+4. **Cobertura por concorrente** — % dos voos da busca em que cada agencia tem
+   oferta, e quantos voos.
+5. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
    no top 10 de Recomendados.
-4. **Por companhia** — menor preco CVC x menor preco Decolar, a diferenca em %,
-   a cobertura das duas e o selo de tempo da fonte no ConectaAS (vermelho quando deu
-   timeout).
-5. **Posicoes**, **combinacoes de companhias** e, recolhidos, o **log do
-   ConectaAS** (links para o Kibana) e o **diagnostico**.
+6. **Por companhia** — menor preco CVC x Concorrente dcl, a diferenca em %, a
+   cobertura dos dois e o selo de tempo da fonte no ConectaAS (vermelho quando
+   deu timeout). As companhias aereas (LATAM, GOL, Azul...) aparecem pelo nome.
+7. **Posicoes**, **combinacoes de companhias**, **historico** e, recolhidos, o
+   **log do ConectaAS** (links para o Kibana) e o **diagnostico**.
 
-A Decolar e localizada pelo nome ou id do agente (`RIVAL` no topo do
-`coletor.js`: `/decolar/i`), que funciona nos dois sites. Para comparar com
-outra agencia, troque o `RIVAL`. Se a Decolar nao estiver na busca, o painel
-avisa. Uma oferta dividida entre a CVC e a Decolar conta para as duas.
+### Rotulos e cores dos concorrentes
 
-A comparacao com a Decolar e campo novo da analise e **ainda nao existe no
-Python** (`robo_cia_skyscanner.py`); os numeros que ja existiam nao mudaram.
+Tudo em `APELIDOS`, no topo do `coletor.js`, e `CVC.rotulosDaBusca` /
+`CVC.sufixoDe` no `analise.js`:
 
-Cores: CVC em amarelo com azul-marinho e Decolar em roxo com branco, as cores
-das marcas. Ficam em variaveis no topo do `painel.html` (`--cvc`,
-`--cvc-tinta`, `--decolar`, `--decolar-tinta`) para acertar o tom exato num
-lugar so.
+| agencia | rotulo | cor |
+|---|---|---|
+| Decolar | Concorrente dcl | roxo |
+| Zupper | Concorrente zpr | azul Tiffany |
+| MaxMilhas | Concorrente MXM | verde |
+| 123milhas | Concorrente MLS | azul-marinho |
+| GOL | Concorrente GLO | laranja |
+| LATAM | Concorrente LTM | vermelho |
+| Azul | Concorrente ZLA | azul |
+| demais | Concorrente + sufixo derivado | cinza |
+
+Sufixo derivado (mesma regra dos fixos): as 3 primeiras consoantes do nome,
+ignorando digitos e "h", sem repetir letra seguida; com menos de 3 consoantes,
+completa com as vogais (GOL -> GLO). Colisao ganha numero (MLS2). Como depende
+so do nome, a mesma agencia tem sempre o mesmo rotulo — em qualquer busca e no
+Excel. As cores ficam em variaveis no topo do `painel.html` (`--cvc`,
+`--decolar`, `--tiffany`, `--maxmilhas`, `--milhas123`, `--gol`, `--latam`,
+`--azulcia`); os sites das marcas estavam fora de alcance ao montar, entao sao
+tons conhecidos de cada marca, para acertar num lugar so.
+
+A Decolar e localizada pelo nome ou id do agente (`RIVAL` no `coletor.js`:
+`/decolar/i`), nos dois sites. Para comparar com outra agencia, troque o
+`RIVAL`. Se ela nao estiver na busca, o painel avisa. Uma oferta dividida
+entre duas agencias conta para as duas.
+
+Os campos de concorrentes (comparacao, precos por agencia, cobertura) sao
+novos na analise e **ainda nao existem no Python** (`robo_cia_skyscanner.py`);
+os numeros que ja existiam nao mudaram.
 
 O icone fica em `icones/` (`icone.svg` e a fonte; os PNG 16/32/48/128 sao
 gerados dele — o de 16 px sai sem o selo laranja, que nesse tamanho vira borrao).
@@ -88,13 +118,19 @@ abas nao se atropelarem). No painel, o cartao **Historico de buscas** mostra o
 total e as ultimas 5, e tem:
 
 - **Exportar para Excel** — CSV no padrao do Excel em portugues (`;`, virgula
-  decimal, acentos com BOM UTF-8). Colunas: Data da busca, Hora, Site, Rota,
-  Data Ida, Data Volta, Adultos, Preco CVC, Preco Decolar, %Variacao, Voos CVC,
-  Voos Decolar, Voos na busca, Cobertura CVC %, Cobertura Decolar % (voos de
-  cada uma sobre os voos da busca, calculada na exportacao) e Busca completa.
+  decimal, acentos com BOM UTF-8), **sem nome real de concorrente**. Colunas:
+  Data da busca, Hora, Site, Rota, Data Ida, Data Volta, Adultos, Preco CVC,
+  Preco Concorrente dcl, %Variacao, Voos CVC, Voos Concorrente dcl, Voos na
+  busca, Cobertura CVC %, Cobertura Concorrente dcl %, Preco/Voos/Cobertura
+  Concorrente zpr, Concorrente + Barato (preco e quem), Concorrente + Caro
+  (preco e quem), frente a frente (voos CVC mais barata, Concorrente dcl mais
+  barato, empatados), 1a posicao CVC, CVC no top 10, Agencias na busca, Melhor
+  preco por concorrente, Cobertura por agencia e Busca completa. Coberturas sao
+  calculadas na exportacao; buscas gravadas antes desta versao saem com as
+  colunas novas vazias.
 - **Limpar historico** — pede dois cliques.
 
-Regras: %Variacao = (CVC - Decolar) / Decolar (positivo = CVC mais cara), a
+Regras: %Variacao = (CVC - Concorrente dcl) / Concorrente dcl (positivo = CVC mais cara), a
 mesma do painel. Sem oferta de uma das duas, o preco e a % ficam **vazios**,
 nunca zero. A mesma rota buscada duas vezes gera duas linhas, cada uma com sua
 hora. O historico e de cada pessoa/navegador: para juntar o de varias pessoas,
