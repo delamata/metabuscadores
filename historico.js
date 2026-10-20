@@ -42,6 +42,9 @@ var HIST = (() => {
       cvc_top10: ((res.posicoes || {}).no_topo || {})[10] ?? null,
       // todas as agencias: rotulo do painel (sem nome real), voos com oferta e menor preco
       agencias: (res.por_agente || []).map((a) => ({ rotulo: a.rotulo || a.nome, voos: a.voos, menor: a.menor })),
+      // companhias em que a CVC nao teve voo, com o motivo
+      sem_cvc: (res.por_cia || []).filter((l) => l.motivo_sem_cvc)
+        .map((l) => ({ cia: l.cia, motivo: l.motivo_sem_cvc.texto })),
     };
   }
 
@@ -113,6 +116,8 @@ var HIST = (() => {
       .slice().sort((x, y) => x.menor - y.menor).map((a) => `${a.rotulo}: ${num(a.menor, 2)}`).join(" | ")],
     ["Cobertura por agência", (l) => (l.agencias || []).map((a) =>
       `${a.rotulo}: ${num(cobertura(a.voos, l.voos_busca), 1)}% (${a.voos} voos, menor ${num(a.menor, 2)})`).join(" | ")],
+    // "GOL: Fonte SGOL deu timeout em 6.000 ms no ConectaAS... | LATAM: ..."
+    ["Cias sem CVC (motivo)", (l) => (l.sem_cvc || []).map((x) => `${x.cia}: ${x.motivo}`).join(" | ")],
     ["Busca completa", (l) => (l.busca_completa ? "sim" : "não")],
   ];
 

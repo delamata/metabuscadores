@@ -288,11 +288,16 @@ async function fecha() {
   const [porCia, outras, outrasTimeout] = CVC.temposPorCia(
     usado ? log.por_correlation[usado] : {}, CVC.FONTE_PARA_CIA, falhas);
   for (const linha of res.por_cia) {
-    const r = porCia[linha.cia] || {};
+    // nome da cia no site ("GOL") -> nome do mapa de fontes ("GOL Linhas Aereas")
+    const r = porCia[linha.cia] || porCia[CVC.ciaCanonica(linha.cia)] || {};
     linha.tempo_ms = r.tempo_ms ?? null;
     linha.fonte = r.fonte ?? null;
     linha.timeout_ms = r.timeout_ms ?? null;
     linha.fonte_timeout = r.fonte_timeout ?? null;
+    linha.falha = r.falha ?? null;
+    // CVC sem voo nesta cia: por que
+    linha.motivo_sem_cvc = CVC.motivoSemCvc(linha, {
+      agenteParticipa: res.agente_participa_da_busca, logErro: erroLog, temBusca: !!usado });
   }
 
   let registro = {};

@@ -145,55 +145,64 @@ function extremos(e) {
     <div class="extremos">${quadro("Concorrente + Barato", mn)}${quadro("Concorrente + Caro", mx)}</div></div>`;
 }
 
+// Top 10 Players de um ranking + a CVC sempre, como referencia (fora da
+// contagem). `ordem` ja vem ordenada; a posicao exibida e a da lista inteira.
+const TOP_PLAYERS = 10;
+function top10ComCvc(ordem) {
+  let players = 0;
+  const linhas = [];
+  ordem.forEach((a, i) => {
+    const ehCvc = a.cor === "cvc";
+    if (ehCvc || players < TOP_PLAYERS) linhas.push({ a, pos: i + 1 });
+    if (!ehCvc) players += 1;
+  });
+  return { linhas, fora: Math.max(0, players - TOP_PLAYERS) };
+}
+const foraDoTop = (n) => (n ? `<div class="frente">+${n} player(s) fora do top 10 — todos vão no Excel</div>` : "");
+
 // Melhor preco de cada concorrente (o menor que ele ofereceu na busca), do
-// mais barato para o mais caro. A CVC entra na lista como referencia e cada
-// concorrente mostra a diferenca sobre o melhor preco da CVC.
-const MAX_PRECOS = 12;
+// mais barato para o mais caro: top 10 Players + a CVC. Cada concorrente
+// mostra a diferenca da CVC sobre o melhor preco dele.
 function melhoresPrecos(e) {
-  const ags = (e.por_agente || []).filter((a) => a.menor != null)
-    .slice().sort((x, y) => x.menor - y.menor);
-  if (!ags.length) return "";
+  const ordem = (e.por_agente || []).filter((a) => a.menor != null).slice().sort((x, y) => x.menor - y.menor);
+  if (!ordem.length) return "";
   const cvc = e.menor_agente;
-  const linhas = ags.slice(0, MAX_PRECOS).map((a, i) => {
+  const { linhas, fora } = top10ComCvc(ordem);
+  const html = linhas.map(({ a, pos }) => {
     let difer = "";
     if (a.cor !== "cvc" && cvc != null) {
       const d = (cvc - a.menor) / a.menor * 100;   // mesma conta do painel: (CVC - concorrente) / concorrente
       difer = `<span class="tag ${d <= 0 ? "bom" : "ruim"}" title="CVC em relação a este concorrente">${dif(d)}</span>`;
     }
     return `<div class="linha-preco ${a.cor === "cvc" ? "eh-cvc" : ""}">
-      <span class="pos-preco">${i + 1}º</span>${marca(a)}
+      <span class="pos-preco">${pos}º</span>${marca(a)}
       <b class="valor-preco">${brl(a.menor)}</b><span class="dif-preco">${difer}</span></div>`;
   }).join("");
-  const resto = ags.length > MAX_PRECOS
-    ? `<div class="frente">e mais ${ags.length - MAX_PRECOS} agência(s) — todas vão no Excel</div>` : "";
   return `<div class="cartao">
     <div class="cobertura-topo"><span class="rotulo">Melhor preço por concorrente</span>
-      <span class="suave">${ags.length} agências</span></div>
-    ${linhas}
+      <span class="suave">top 10 players</span></div>
+    ${html}
     <div class="legenda-cob suave">% = CVC acima (+) ou abaixo (−) do melhor preço do concorrente</div>
-    ${resto}
+    ${foraDoTop(fora)}
   </div>`;
 }
 
-// Cobertura por agencia: em quantos dos voos da busca cada uma tem oferta.
-const MAX_AGENCIAS = 10;
+// Cobertura por agencia: % dos voos da busca com oferta — top 10 Players + CVC.
 function cobertura(e, rival) {
   const total = e.total_itinerarios || 0;
-  const ags = e.por_agente || [];
-  const linhas = ags.slice(0, MAX_AGENCIAS).map((a) => {
+  const { linhas, fora } = top10ComCvc(e.por_agente || []);   // por_agente ja vem por voos
+  const html = linhas.map(({ a }) => {
     const larg = total ? (a.voos / total * 100).toFixed(1) : 0;
     return `<div class="linha-barra larga">${marca(a)}
       <span class="barra"><i class="${esc(a.cor || "outra")}" style="width:${larg}%"></i></span>
       <span class="num-cob"><b>${total ? pct(a.voos / total) : "—"}</b> <span class="fraco">${a.voos}</span></span></div>`;
   }).join("");
-  const resto = ags.length > MAX_AGENCIAS
-    ? `<div class="frente">e mais ${ags.length - MAX_AGENCIAS} agência(s) — todas vão no Excel</div>` : "";
   return `<div class="cartao">
     <div class="cobertura-topo"><span class="rotulo">Cobertura por concorrente</span>
-      <span class="suave">${ags.length} agências · ${total} voos</span></div>
-    <div class="duas">${linhas || '<span class="fraco">sem agências</span>'}</div>
+      <span class="suave">top 10 · ${total} voos</span></div>
+    <div class="duas">${html || '<span class="fraco">sem agências</span>'}</div>
     <div class="legenda-cob suave">% dos voos da busca com oferta · nº de voos</div>
-    ${resto}
+    ${foraDoTop(fora)}
   </div>`;
 }
 
@@ -219,8 +228,12 @@ function seloTempo(l) {
 function cia(l, rival) {
   const difer = l.delta_rival == null ? ""
     : ` <span class="tag ${l.delta_rival <= 0 ? "bom" : "ruim"}">${dif(l.delta_rival)}</span>`;
+  // CVC sem voo nesta cia: o motivo no lugar do preco
+  const semCvc = l.motivo_sem_cvc
+    ? `<div class="sem-cvc"><b>CVC não retornou nesta companhia</b><br>${esc(l.motivo_sem_cvc.texto)}</div>` : "";
   return `<div class="cia">
     <div class="cia-topo"><span class="cia-nome">${esc(l.cia)}</span>${seloTempo(l)}</div>
+    ${semCvc}
     <div class="cia-grade">
       <div><div class="rotulo">CVC</div><div class="valor">${brl(l.menor_agente)}${difer}</div></div>
       <div><div class="rotulo rival">${esc(rival)}</div><div class="valor">${brl(l.menor_rival)}</div></div>

@@ -11,6 +11,9 @@ const resultado = {
   maior_geral: { valor: 9100, agencias: [{ id: "gtg", nome: "Gotogate", rotulo: "Player 12", cor: null }] },
   frente_a_frente: { cvc: 12, rival: 27, empate: 3 },
   posicoes: { primeira: 2, no_topo: { 5: 2, 10: 3 } },
+  por_cia: [{ cia: "Azul", motivo_sem_cvc: null },
+            { cia: "LATAM Airlines", motivo_sem_cvc: { codigo: "sem_oferta",
+              texto: "Fonte LAT respondeu em 2.776 ms, mas a CVC não teve oferta para estes voos no site." } }],
   por_agente: [
     { id: "dec", nome: "Decolar", rotulo: "Player 1", voos: 367, menor: 3956 },
     { id: "cvc_", nome: "CVC", rotulo: "CVC", voos: 93, menor: 3673.88 },
@@ -30,6 +33,7 @@ test("linha do historico a partir do resultado", () => {
     agencias: [{ rotulo: "Player 1", voos: 367, menor: 3956 },
                { rotulo: "CVC", voos: 93, menor: 3673.88 },
                { rotulo: "Player 2", voos: 40, menor: 3500 }],
+    sem_cvc: [{ cia: "LATAM Airlines", motivo: "Fonte LAT respondeu em 2.776 ms, mas a CVC não teve oferta para estes voos no site." }],
   });
 });
 
@@ -45,7 +49,7 @@ test("sem oferta fica vazio, nunca zero", () => {
   assert.equal(linha[8], "");      // Preco Decolar
   assert.equal(linha[9], "");      // %Variacao
   assert.equal(linha[13], "");     // Cobertura CVC: sem total de voos
-  assert.equal(linha[30], "não");  // Busca completa
+  assert.equal(linha[31], "não");  // Busca completa
   assert.equal(linha[15], "");     // Preco Player 2: linha antiga/sem dado
 });
 
@@ -68,7 +72,7 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
     + "%Variação;Voos CVC;Voos Player 1;Voos na busca;Cobertura CVC %;Cobertura Player 1 %;"
     + "Preço Player 2;Voos Player 2;Cobertura Player 2 %;Concorrente + Barato (preço);Concorrente + Barato;"
     + "Concorrente + Caro (preço);Concorrente + Caro;Voos CVC mais barata;Voos Player 1 mais barato;"
-    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Melhor preço por concorrente;Cobertura por agência;Busca completa");
+    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Melhor preço por concorrente;Cobertura por agência;Cias sem CVC (motivo);Busca completa");
   const c = linha.split(";");
   assert.equal(c[2], "Kayak");
   assert.equal(c[3], "SAO-MCZ");
@@ -92,7 +96,8 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
   assert.ok(!/decolar|zupper|gotogate/i.test(csv), "nome de concorrente vazou no CSV");
   assert.equal(c[14], "89,1");     // 367 / 412
   assert.equal(c[28], "Player 2: 3500,00 | CVC: 3673,88 | Player 1: 3956,00");
-  assert.equal(c[30], "sim");
+  assert.equal(c[30], "LATAM Airlines: Fonte LAT respondeu em 2.776 ms, mas a CVC não teve oferta para estes voos no site.");
+  assert.equal(c[31], "sim");
 });
 
 test("CSV escapa texto com ponto e virgula ou aspas", () => {

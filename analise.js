@@ -227,6 +227,46 @@ var CVC = (() => {
     return { posicoes, total: resultados.length, primeira: posicoes[0] ?? null, no_topo: faixas };
   }
 
+  // ---- companhia aerea: nome do site -> nome do FONTE_PARA_CIA ------------- #
+  // O Skyscanner chama de "GOL Linhas Aéreas"/"LATAM Airlines"; o Kayak de
+  // "GOL"/"LATAM". Sem isto, no Kayak o tempo da fonte e o motivo de a CVC nao
+  // ter retornado nunca achariam a companhia.
+  const CIAS = [[/\bgol\b/i, "GOL Linhas Aéreas"], [/\bazul\b/i, "Azul"],
+                [/\blatam\b/i, "LATAM Airlines"], [/\bamerican\b/i, "American Airlines"]];
+  function ciaCanonica(nome) {
+    const c = CIAS.find(([re]) => re.test(nome || ""));
+    return c ? c[1] : nome;
+  }
+  const fontesDaCia = (cia) => Object.keys(FONTE_PARA_CIA).filter((f) => FONTE_PARA_CIA[f] === ciaCanonica(cia));
+
+  // ---- por que a CVC nao retornou numa companhia ------------------------- #
+  // So para companhia em que a CVC teve 0 voos. Usa o que a busca e o log do
+  // ConectaAS dizem, do mais especifico para o mais generico. `ctx`:
+  // { agenteParticipa, logErro, temBusca } (temBusca = achou o correlationId).
+  const milhar = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  function motivoSemCvc(l, ctx) {
+    if (!l || l.voos_agente > 0) return null;
+    const c = ctx || {};
+    if (c.agenteParticipa === false)
+      return { codigo: "nao_participou", texto: "A CVC não participou desta busca (não está entre as agências do site)." };
+    if (l.timeout_ms != null)
+      return { codigo: "timeout", texto: `Fonte ${l.fonte_timeout} deu timeout em ${milhar(l.timeout_ms)} ms no ConectaAS — a oferta não chegou a tempo.` };
+    if (l.fonte_timeout) {
+      const det = l.falha ? `: ${String(l.falha).replace(/\s+/g, " ").slice(0, 140)}` : "";
+      return { codigo: "falha", texto: `Fonte ${l.fonte_timeout} falhou no ConectaAS${det}` };
+    }
+    if (l.tempo_ms != null)
+      return { codigo: "sem_oferta", texto: `Fonte ${l.fonte} respondeu em ${milhar(l.tempo_ms)} ms, mas a CVC não teve oferta para estes voos no site.` };
+    if (c.logErro)
+      return { codigo: "log_indisponivel", texto: `Motivo indisponível: log do ConectaAS não consultado (${String(c.logErro).slice(0, 80)}).` };
+    if (!c.temBusca)
+      return { codigo: "busca_fora_do_log", texto: "Motivo indisponível: esta busca não foi encontrada no log do ConectaAS." };
+    const fontes = fontesDaCia(l.cia);
+    if (!fontes.length)
+      return { codigo: "sem_fonte", texto: "Nenhuma fonte do ConectaAS mapeada para esta companhia." };
+    return { codigo: "nao_consultada", texto: `Fonte ${fontes.join("/")} não aparece no log desta busca — não foi consultada.` };
+  }
+
   // ---- rotulos das agencias ---------------------------------------------- #
   // So a CVC aparece com o nome real. Cada concorrente vira "Player N", com
   // numero FIXO por agencia: o mesmo em qualquer busca, em qualquer
@@ -640,6 +680,7 @@ var CVC = (() => {
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
            SITES, siteDaUrl, doKayak, AGENCIAS, rotulosDaBusca, rotulaTodas, rotuloAtual,
+           ciaCanonica, motivoSemCvc,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();

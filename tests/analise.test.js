@@ -275,3 +275,28 @@ test("rotulos antigos viram Player N", () => {
   assert.equal(CVC.rotuloAtual("Concorrente + Barato"), "Concorrente + Barato");
   assert.equal(CVC.rotuloAtual("CVC"), "CVC");
 });
+
+test("nome da cia no Kayak acha o nome do mapa de fontes", () => {
+  assert.equal(CVC.ciaCanonica("GOL"), "GOL Linhas Aéreas");
+  assert.equal(CVC.ciaCanonica("GOL Linhas Aéreas"), "GOL Linhas Aéreas");
+  assert.equal(CVC.ciaCanonica("LATAM"), "LATAM Airlines");
+  assert.equal(CVC.ciaCanonica("Azul Linhas Aéreas"), "Azul");
+  assert.equal(CVC.ciaCanonica("Copa Airlines"), "Copa Airlines");
+});
+
+test("motivo de a CVC nao retornar numa companhia", () => {
+  const ok = { agenteParticipa: true, logErro: null, temBusca: true };
+  const m = (l, ctx = ok) => CVC.motivoSemCvc(Object.assign({ cia: "GOL", voos_agente: 0 }, l), ctx);
+  assert.equal(CVC.motivoSemCvc({ cia: "GOL", voos_agente: 3 }, ok), null);           // tem CVC: sem motivo
+  assert.equal(m({}, { agenteParticipa: false }).codigo, "nao_participou");
+  assert.deepEqual(m({ timeout_ms: 6000, fonte_timeout: "SGOL" }),
+    { codigo: "timeout", texto: "Fonte SGOL deu timeout em 6.000 ms no ConectaAS — a oferta não chegou a tempo." });
+  assert.equal(m({ fonte_timeout: "SGOL", falha: "GwAereo consulting fail with source SGOL  Detail: 500" }).texto,
+    "Fonte SGOL falhou no ConectaAS: GwAereo consulting fail with source SGOL Detail: 500");
+  assert.equal(m({ tempo_ms: 2776, fonte: "LAT" }, ok).texto,
+    "Fonte LAT respondeu em 2.776 ms, mas a CVC não teve oferta para estes voos no site.");
+  assert.equal(m({}, { agenteParticipa: true, logErro: "HTTP 404 no proxy ES" }).codigo, "log_indisponivel");
+  assert.equal(m({}, { agenteParticipa: true, temBusca: false }).codigo, "busca_fora_do_log");
+  assert.equal(m({ cia: "Copa Airlines" }).codigo, "sem_fonte");
+  assert.deepEqual(m({}), { codigo: "nao_consultada", texto: "Fonte SGOL não aparece no log desta busca — não foi consultada." });
+});
