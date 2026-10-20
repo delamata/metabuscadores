@@ -237,8 +237,23 @@ test("todas as agencias, menor/maior da busca e apelidos", () => {
   assert.equal(r.maior_geral.valor, 1900);
   assert.deepEqual(r.maior_geral.agencias.map((a) => a.nome), ["Gotogate"]);
   const APELIDOS = [{ re: /decolar/i, rotulo: "Concorrente 1", cor: "rival" },
-                    { re: /zupper/i, rotulo: "Concorrente 3", cor: "tiffany" }];
-  const rot = CVC.rotulaTodas(r.por_agente, "cvc_", APELIDOS);
+                    { re: /zupper/i, manterNome: true, cor: "tiffany" },
+                    { re: /max\s*milhas/i, cor: "maxmilhas" }];
+  const mapa = CVC.rotulosDaBusca(r.por_agente, "cvc_", APELIDOS);
+  const rot = CVC.rotulaTodas(r.por_agente, mapa);
   assert.deepEqual(rot.map((a) => [a.rotulo, a.cor]),
-    [["Concorrente 1", "rival"], ["Gotogate", null], ["CVC", "cvc"], ["Concorrente 3", "tiffany"]]);
+    [["Concorrente 1", "rival"], ["Concorrente 2", null], ["CVC", "cvc"], ["Zupper", "tiffany"]]);
+  // o mesmo numero em qualquer lista da mesma busca
+  assert.deepEqual(CVC.rotulaTodas(r.menor_geral.agencias, mapa).map((a) => a.rotulo), ["Zupper", "Concorrente 2"]);
+  assert.deepEqual(CVC.rotulaTodas(r.maior_geral.agencias, mapa).map((a) => a.rotulo), ["Concorrente 2"]);
+});
+
+test("numeracao segue a ordem da cobertura e cor de marca nao muda o numero", () => {
+  const ags = [{ id: "dec", nome: "Decolar" }, { id: "mm", nome: "MaxMilhas" }, { id: "cvc_", nome: "CVC" },
+               { id: "z", nome: "Zupper" }, { id: "g3", nome: "GOL" }, { id: "t", nome: "Trip.com" }];
+  const AP = [{ re: /decolar/i, rotulo: "Concorrente 1", cor: "rival" }, { re: /zupper/i, manterNome: true, cor: "tiffany" },
+              { re: /max\s*milhas/i, cor: "maxmilhas" }, { re: /\bgol\b/i, cor: "gol" }];
+  const m = CVC.rotulosDaBusca(ags, "cvc_", AP);
+  assert.deepEqual([...m.values()].map((v) => `${v.rotulo}/${v.cor}`),
+    ["Concorrente 1/rival", "Concorrente 2/maxmilhas", "CVC/cvc", "Zupper/tiffany", "Concorrente 3/gol", "Concorrente 4/null"]);
 });

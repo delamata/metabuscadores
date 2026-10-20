@@ -11,8 +11,15 @@
     --azul: #2563eb; --sky: #0770e3; --kayak: #ff690f; 
     /* cores das marcas: CVC amarelo + azul-marinho; Decolar roxo + branco */
     --cvc: #ffe000; --cvc-tinta: #0b2a6f; --decolar: #4b00d1; --decolar-tinta: #ffffff;
-    /* Concorrente 3 (Zupper) com o menor preco: azul Tiffany */
-    --tiffany: #81d8d0; --tiffany-tinta: #08312e; --outra: #9ca3af;
+    /* cores das marcas das agencias (fundo + texto). Os sites estavam fora
+       de alcance na hora de montar: tons das marcas, ajustaveis aqui. */
+    --tiffany: #81d8d0; --tiffany-tinta: #08312e;      /* Zupper */
+    --maxmilhas: #22a45d; --maxmilhas-tinta: #ffffff;   /* MaxMilhas */
+    --milhas123: #1d1b5e; --milhas123-tinta: #ffffff;   /* 123milhas */
+    --gol: #ff7020; --gol-tinta: #ffffff;               /* GOL */
+    --latam: #e8114b; --latam-tinta: #ffffff;           /* LATAM */
+    --azulcia: #00349a; --azulcia-tinta: #ffffff;       /* Azul / Azul Viagens */
+    --outra: #9ca3af;
     --bom: #15803d; --bom-f: #dcfce7; --ruim: #b91c1c; --ruim-f: #fee2e2;
     --alerta: #92400e; --alerta-f: #fef3c7; --barra: #e5e7eb;
   }
@@ -72,9 +79,19 @@
            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .marca.cvc { background: var(--cvc); color: var(--cvc-tinta); }
   .marca.rival { background: var(--decolar); color: var(--decolar-tinta); }
-  .marca.tiffany { background: var(--tiffany); color: var(--tiffany-tinta); }
   .marca.outra { background: var(--fundo); color: var(--suave); border: 1px solid var(--linha); }
+  .marca.tiffany { background: var(--tiffany); color: var(--tiffany-tinta); }
   .barra i.tiffany { background: var(--tiffany); }
+  .marca.maxmilhas { background: var(--maxmilhas); color: var(--maxmilhas-tinta); }
+  .barra i.maxmilhas { background: var(--maxmilhas); }
+  .marca.milhas123 { background: var(--milhas123); color: var(--milhas123-tinta); }
+  .barra i.milhas123 { background: var(--milhas123); }
+  .marca.gol { background: var(--gol); color: var(--gol-tinta); }
+  .barra i.gol { background: var(--gol); }
+  .marca.latam { background: var(--latam); color: var(--latam-tinta); }
+  .barra i.latam { background: var(--latam); }
+  .marca.azulcia { background: var(--azulcia); color: var(--azulcia-tinta); }
+  .barra i.azulcia { background: var(--azulcia); }
   .barra i.outra { background: var(--outra); }
   .linha-barra.larga { grid-template-columns: 104px 1fr 62px; }
   .num-cob { text-align: right; white-space: nowrap; }
@@ -86,7 +103,14 @@
   .extremo .preco { font-size: clamp(15px, 5vw, 20px); font-weight: 800; margin-top: 2px; white-space: nowrap; }
   .extremo .quem { font-size: 12px; font-weight: 600; margin-top: 2px; }
   .extremo.tiffany { background: var(--tiffany); color: var(--tiffany-tinta); border-color: var(--tiffany); }
-  .extremo.tiffany .rotulo { color: inherit; opacity: .8; }
+  .extremo.maxmilhas { background: var(--maxmilhas); color: var(--maxmilhas-tinta); border-color: var(--maxmilhas); }
+  .extremo.milhas123 { background: var(--milhas123); color: var(--milhas123-tinta); border-color: var(--milhas123); }
+  .extremo.gol { background: var(--gol); color: var(--gol-tinta); border-color: var(--gol); }
+  .extremo.latam { background: var(--latam); color: var(--latam-tinta); border-color: var(--latam); }
+  .extremo.azulcia { background: var(--azulcia); color: var(--azulcia-tinta); border-color: var(--azulcia); }
+  .extremo.cvc { background: var(--cvc); color: var(--cvc-tinta); border-color: var(--cvc); }
+  .extremo.rival { background: var(--decolar); color: var(--decolar-tinta); border-color: var(--decolar); }
+  .extremo[class*=" "] .rotulo { color: inherit; opacity: .85; }
   .numeros-cob { display: flex; justify-content: space-between; margin-top: 6px;
                  font-size: 11px; color: var(--suave); }
   .cia-cob { margin-top: 8px; }

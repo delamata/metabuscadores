@@ -123,26 +123,25 @@ function barraDupla(cvcN, rivN, total, rival) {
 // Nome de exibicao + cor de cada agencia ja vem do coletor (APELIDOS).
 const marca = (ag) => `<span class="marca ${esc(ag.cor || "outra")}">${esc(ag.rotulo || ag.nome)}</span>`;
 
-// Menor e maior preco da busca inteira, de qualquer agencia. Menor da Zupper
-// (Concorrente 3) pinta o quadro de azul Tiffany.
+// Menor e maior preco da busca inteira, de qualquer agencia. O quadro ganha
+// a cor da marca da agencia (Zupper = azul Tiffany, MaxMilhas, GOL...).
 function extremos(e) {
   const mn = e.menor_geral, mx = e.maior_geral;
   if (!mn || mn.valor == null) return "";
   const quem = (ags) => (ags || []).map((a) => esc(a.rotulo || a.nome)).join(", ") || "—";
-  const tiffany = (mn.agencias || []).some((a) => a.cor === "tiffany");
+  // empate entre agencias de cores diferentes: quadro neutro
+  const cor = (ags) => {
+    const cs = [...new Set((ags || []).map((a) => a.cor || ""))];
+    return cs.length === 1 && cs[0] ? cs[0] : "";
+  };
+  const quadro = (titulo, x) => `<div class="extremo ${esc(cor(x && x.agencias))}">
+        <div class="rotulo">${titulo}</div>
+        <div class="preco">${brl(x && x.valor)}</div>
+        <div class="quem">${quem(x && x.agencias)}</div></div>`;
   return `<div class="cartao">
     <div class="cobertura-topo"><span class="rotulo">Preços da busca</span>
       <span class="suave">todas as agências</span></div>
-    <div class="extremos">
-      <div class="extremo ${tiffany ? "tiffany" : ""}">
-        <div class="rotulo">Menor preço</div>
-        <div class="preco">${brl(mn.valor)}</div>
-        <div class="quem">${quem(mn.agencias)}</div></div>
-      <div class="extremo">
-        <div class="rotulo">Maior preço</div>
-        <div class="preco">${brl(mx && mx.valor)}</div>
-        <div class="quem">${quem(mx && mx.agencias)}</div></div>
-    </div></div>`;
+    <div class="extremos">${quadro("Concorrente + Barato", mn)}${quadro("Concorrente + Caro", mx)}</div></div>`;
 }
 
 // Cobertura por agencia: em quantos dos voos da busca cada uma tem oferta.

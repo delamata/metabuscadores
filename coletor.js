@@ -7,11 +7,18 @@ const AGENTE = "cvc_";
 // Com quem a CVC e comparada: localizada pelo nome ou id do agente. O `nome`
 // e o que aparece no painel e no Excel.
 const RIVAL = { nome: "Concorrente 1", re: /decolar/i };
-// Apelidos de exibicao das agencias (o resto aparece pelo nome real) e a cor
-// do quadro de cada uma. Concorrente 2 ainda nao definido.
+// Nomes e cores das agencias no painel e no Excel (ver CVC.rotulosDaBusca).
+// A Decolar e sempre "Concorrente 1"; a Zupper mantem o nome; as demais sao
+// numeradas a partir de "Concorrente 2", na ordem da cobertura. `cor` e a
+// classe CSS da marca (cores no topo do painel.html).
 const APELIDOS = [
   { re: /decolar/i, rotulo: "Concorrente 1", cor: "rival" },
-  { re: /zupper/i, rotulo: "Concorrente 3", cor: "tiffany" },
+  { re: /zupper/i, manterNome: true, cor: "tiffany" },
+  { re: /max\s*milhas/i, cor: "maxmilhas" },
+  { re: /123\s*milhas/i, cor: "milhas123" },
+  { re: /\bgol\b|voegol/i, cor: "gol" },
+  { re: /latam/i, cor: "latam" },
+  { re: /azul/i, cor: "azulcia" },
 ];
 // Reconhece o site ao entrar (Skyscanner ou Kayak). O payload e o mesmo nos
 // dois; o site so muda a leitura da rota na URL e o rotulo no painel.
@@ -299,6 +306,7 @@ async function fecha() {
     linha.fonte_timeout = r.fonte_timeout ?? null;
   }
 
+  const rotulos = CVC.rotulosDaBusca(res.por_agente, AGENTE, APELIDOS);
   ultimoResultado = {
     estado: "pronto",
     quando: new Date().toLocaleTimeString("pt-BR"),
@@ -321,11 +329,9 @@ async function fecha() {
     menor_rival: res.menor_rival,
     delta_rival: res.delta_rival,
     frente_a_frente: res.frente_a_frente,
-    por_agente: CVC.rotulaTodas(res.por_agente, AGENTE, APELIDOS),
-    menor_geral: { valor: res.menor_geral.valor,
-                   agencias: CVC.rotulaTodas(res.menor_geral.agencias, AGENTE, APELIDOS) },
-    maior_geral: { valor: res.maior_geral.valor,
-                   agencias: CVC.rotulaTodas(res.maior_geral.agencias, AGENTE, APELIDOS) },
+    por_agente: CVC.rotulaTodas(res.por_agente, rotulos),
+    menor_geral: { valor: res.menor_geral.valor, agencias: CVC.rotulaTodas(res.menor_geral.agencias, rotulos) },
+    maior_geral: { valor: res.maior_geral.valor, agencias: CVC.rotulaTodas(res.maior_geral.agencias, rotulos) },
     outras_fontes: outras,
     fontes_timeout: outrasTimeout,
     kibana: usado ? CVC.urlKibana(usado) : null,

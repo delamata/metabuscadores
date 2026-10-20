@@ -228,17 +228,27 @@ var CVC = (() => {
   }
 
   // ---- rotulos das agencias ---------------------------------------------- #
-  // Nome de exibicao de uma agencia: "CVC" para o nosso agente, o apelido
-  // configurado (ex. Decolar -> "Concorrente 1") ou o nome real. `cor` diz ao
-  // painel como pintar (cvc, rival, tiffany ou nada).
-  function rotulo(ag, agente, apelidos) {
-    if (ag.id === agente) return { rotulo: "CVC", cor: "cvc" };
-    for (const ap of apelidos || [])
-      if (ap.re.test(ag.nome || "") || ap.re.test(ag.id || "")) return { rotulo: ap.rotulo, cor: ap.cor || null };
-    return { rotulo: ag.nome || ag.id, cor: null };
+  // Nome de exibicao e cor de cada agencia da busca, decididos UMA vez a
+  // partir de por_agente (ordem da cobertura), para a mesma agencia ter o
+  // mesmo numero em todo o painel e no Excel:
+  //   - o nosso agente vira "CVC";
+  //   - apelido com `rotulo` fixo (Decolar -> "Concorrente 1");
+  //   - apelido com `manterNome` fica com o nome real (Zupper);
+  //   - o resto vira "Concorrente 2", "Concorrente 3"... na ordem.
+  // `cor` (de qualquer apelido que bata) diz ao painel como pintar.
+  function rotulosDaBusca(porAgente, agente, apelidos) {
+    const mapa = new Map();
+    let n = 2;
+    for (const ag of porAgente || []) {
+      if (ag.id === agente) { mapa.set(ag.id, { rotulo: "CVC", cor: "cvc" }); continue; }
+      const ap = (apelidos || []).find((x) => x.re.test(ag.nome || "") || x.re.test(ag.id || "")) || {};
+      const rotulo = ap.rotulo || (ap.manterNome ? (ag.nome || ag.id) : `Concorrente ${n++}`);
+      mapa.set(ag.id, { rotulo, cor: ap.cor || null });
+    }
+    return mapa;
   }
-  const rotulaTodas = (lista, agente, apelidos) =>
-    (lista || []).map((ag) => Object.assign({}, ag, rotulo(ag, agente, apelidos)));
+  const rotulaTodas = (lista, mapa) =>
+    (lista || []).map((ag) => Object.assign({}, ag, mapa.get(ag.id) || { rotulo: ag.nome || ag.id, cor: null }));
 
   // ---- Kayak -> formato do Skyscanner -------------------------------------- #
   // O poll do Kayak (/i/api/search/dynamic/flights/poll) traz results[] com os
@@ -581,7 +591,7 @@ var CVC = (() => {
 
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
-           SITES, siteDaUrl, doKayak, rotulaTodas,
+           SITES, siteDaUrl, doKayak, rotulosDaBusca, rotulaTodas,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();
