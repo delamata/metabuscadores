@@ -211,3 +211,34 @@ test("Kayak: acha os resultados aninhados (JSON embutido no HTML)", () => {
   assert.equal(pl.itineraries.results.length, 2);
   assert.deepEqual(pl.itineraries.results[1].legs[0].carriers.marketing, [{ name: "GOL" }]);
 });
+
+test("todas as agencias, menor/maior da busca e apelidos", () => {
+  const pl = {
+    itineraries: {
+      context: { status: "complete" },
+      agents: [{ id: "cvc_", name: "CVC" }, { id: "decb", name: "Decolar" }, { id: "zup", name: "Zupper" },
+               { id: "gtg", name: "Gotogate" }],
+      results: [
+        itin("a", ["Azul"], [[["cvc_"], 500], [["decb"], 470], [["zup"], 300], [["gtg"], 300]]),
+        itin("b", ["GOL Linhas Aéreas"], [[["cvc_"], 400], [["decb"], 450], [["gtg"], 1900]]),
+        itin("c", ["LATAM Airlines"], [[["decb"], 800]]),
+      ],
+    },
+  };
+  const r = CVC.contaPorCia([pl], "cvc_", DECOLAR);
+  // comparacao CVC x Decolar intacta
+  assert.equal(r.menor_agente, 400);
+  assert.equal(r.menor_rival, 450);
+  assert.deepEqual(r.por_agente.map((a) => [a.id, a.voos, a.menor]),
+    [["decb", 3, 450], ["gtg", 2, 300], ["cvc_", 2, 400], ["zup", 1, 300]]);
+  assert.ok(Math.abs(r.por_agente[0].cobertura - 1) < 1e-9);
+  assert.equal(r.menor_geral.valor, 300);
+  assert.deepEqual(r.menor_geral.agencias.map((a) => a.nome), ["Zupper", "Gotogate"]);   // empate
+  assert.equal(r.maior_geral.valor, 1900);
+  assert.deepEqual(r.maior_geral.agencias.map((a) => a.nome), ["Gotogate"]);
+  const APELIDOS = [{ re: /decolar/i, rotulo: "Concorrente 1", cor: "rival" },
+                    { re: /zupper/i, rotulo: "Concorrente 3", cor: "tiffany" }];
+  const rot = CVC.rotulaTodas(r.por_agente, "cvc_", APELIDOS);
+  assert.deepEqual(rot.map((a) => [a.rotulo, a.cor]),
+    [["Concorrente 1", "rival"], ["Gotogate", null], ["CVC", "cvc"], ["Concorrente 3", "tiffany"]]);
+});

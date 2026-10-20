@@ -59,7 +59,7 @@ var CVC = (() => {
         const geral = min(opcoes.map((po) => po.price.amount));
         let reg = vistos.get(rid);
         if (!reg) {
-          reg = { cias: ciasDoItinerario(r), agente: null, geral, precos: {}, rival: null };
+          reg = { cias: ciasDoItinerario(r), agente: null, geral, precos: {}, maiores: {}, rival: null };
           vistos.set(rid, reg);
         }
         reg.geral = Math.min(reg.geral, geral);
@@ -67,9 +67,12 @@ var CVC = (() => {
         // quando ja se conhece o nome de todos os agentes. Campo novo — nao
         // muda nenhum numero que ja existia (e ainda nao tem par no Python).
         for (const po of opcoes)
-          for (const a of po.agentIds || [])
+          for (const a of po.agentIds || []) {
             if (reg.precos[a] === undefined || po.price.amount < reg.precos[a])
               reg.precos[a] = po.price.amount;
+            if (reg.maiores[a] === undefined || po.price.amount > reg.maiores[a])
+              reg.maiores[a] = po.price.amount;
+          }
         if (precosAg.length) {
           const menor = min(precosAg);
           reg.agente = reg.agente === null ? menor : Math.min(reg.agente, menor);
@@ -148,6 +151,26 @@ var CVC = (() => {
       }
     }
 
+    // Cada agencia da busca: em quantos voos tem oferta e o seu menor preco.
+    // E o menor/maior preco da busca inteira, com quem ofereceu (empate soma).
+    const porAgente = new Map();
+    const menorGeral = { valor: null, ids: [] }, maiorGeral = { valor: null, ids: [] };
+    const junta = (alvo, v, a, menor) => {
+      if (alvo.valor === null || (menor ? v < alvo.valor : v > alvo.valor)) { alvo.valor = v; alvo.ids = [a]; }
+      else if (v === alvo.valor && !alvo.ids.includes(a)) alvo.ids.push(a);
+    };
+    for (const reg of vistos.values()) {
+      for (const [a, v] of Object.entries(reg.precos)) {
+        const d = porAgente.get(a) || { id: a, nome: agentesNomes[a] || a, voos: 0, menor: null };
+        d.voos += 1;
+        if (d.menor === null || v < d.menor) d.menor = v;
+        porAgente.set(a, d);
+        junta(menorGeral, v, a, true);
+      }
+      for (const [a, v] of Object.entries(reg.maiores)) junta(maiorGeral, v, a, false);
+    }
+    const nomesDe = (ids) => ids.map((a) => ({ id: a, nome: agentesNomes[a] || a }));
+
     const total = vistos.size;
     let doAgente = 0;
     for (const r of vistos.values()) if (r.agente !== null) doAgente += 1;
@@ -170,6 +193,11 @@ var CVC = (() => {
       delta_rival: dif(menorAgente, menorRival),
       // nos voos que os dois vendem: em quantos cada um e mais barato
       frente_a_frente: frente,
+      // todas as agencias, da que tem mais voos para a que tem menos
+      por_agente: [...porAgente.values()].sort((x, y) => (y.voos - x.voos) || (x.menor - y.menor))
+        .map((d) => ({ ...d, cobertura: total ? d.voos / total : 0 })),
+      menor_geral: { valor: menorGeral.valor, agencias: nomesDe(menorGeral.ids) },
+      maior_geral: { valor: maiorGeral.valor, agencias: nomesDe(maiorGeral.ids) },
     };
   }
 
@@ -198,6 +226,19 @@ var CVC = (() => {
       if (resultados.length >= n) faixas[n] = posicoes.filter((p) => p <= n).length;
     return { posicoes, total: resultados.length, primeira: posicoes[0] ?? null, no_topo: faixas };
   }
+
+  // ---- rotulos das agencias ---------------------------------------------- #
+  // Nome de exibicao de uma agencia: "CVC" para o nosso agente, o apelido
+  // configurado (ex. Decolar -> "Concorrente 1") ou o nome real. `cor` diz ao
+  // painel como pintar (cvc, rival, tiffany ou nada).
+  function rotulo(ag, agente, apelidos) {
+    if (ag.id === agente) return { rotulo: "CVC", cor: "cvc" };
+    for (const ap of apelidos || [])
+      if (ap.re.test(ag.nome || "") || ap.re.test(ag.id || "")) return { rotulo: ap.rotulo, cor: ap.cor || null };
+    return { rotulo: ag.nome || ag.id, cor: null };
+  }
+  const rotulaTodas = (lista, agente, apelidos) =>
+    (lista || []).map((ag) => Object.assign({}, ag, rotulo(ag, agente, apelidos)));
 
   // ---- Kayak -> formato do Skyscanner -------------------------------------- #
   // O poll do Kayak (/i/api/search/dynamic/flights/poll) traz results[] com os
@@ -540,7 +581,7 @@ var CVC = (() => {
 
   return { SEM_CIA, FONTE_PARA_CIA, ciasDoItinerario, contaPorCia, posicoesDoAgente,
            rotasDoLog, consultaLogQuery, agrupaLog, temposPorCia, cfgDaUrl,
-           SITES, siteDaUrl, doKayak,
+           SITES, siteDaUrl, doKayak, rotulaTodas,
            indiceDePlaces, canoniza, consultaMensagensQuery, falhasDasMensagens,
            urlKibana };
 })();

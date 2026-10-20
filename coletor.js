@@ -4,8 +4,15 @@
 // mais servidor local. O payload de 40 MB nunca sai da aba: so o resultado
 // (alguns KB) vai para o service worker, que o guarda para o painel.
 const AGENTE = "cvc_";
-// Com quem a CVC e comparada: localizada pelo nome ou id do agente.
-const RIVAL = { nome: "Decolar", re: /decolar/i };
+// Com quem a CVC e comparada: localizada pelo nome ou id do agente. O `nome`
+// e o que aparece no painel e no Excel.
+const RIVAL = { nome: "Concorrente 1", re: /decolar/i };
+// Apelidos de exibicao das agencias (o resto aparece pelo nome real) e a cor
+// do quadro de cada uma. Concorrente 2 ainda nao definido.
+const APELIDOS = [
+  { re: /decolar/i, rotulo: "Concorrente 1", cor: "rival" },
+  { re: /zupper/i, rotulo: "Concorrente 3", cor: "tiffany" },
+];
 // Reconhece o site ao entrar (Skyscanner ou Kayak). O payload e o mesmo nos
 // dois; o site so muda a leitura da rota na URL e o rotulo no painel.
 const SITE = CVC.siteDaUrl(location.href);
@@ -314,6 +321,11 @@ async function fecha() {
     menor_rival: res.menor_rival,
     delta_rival: res.delta_rival,
     frente_a_frente: res.frente_a_frente,
+    por_agente: CVC.rotulaTodas(res.por_agente, AGENTE, APELIDOS),
+    menor_geral: { valor: res.menor_geral.valor,
+                   agencias: CVC.rotulaTodas(res.menor_geral.agencias, AGENTE, APELIDOS) },
+    maior_geral: { valor: res.maior_geral.valor,
+                   agencias: CVC.rotulaTodas(res.maior_geral.agencias, AGENTE, APELIDOS) },
     outras_fontes: outras,
     fontes_timeout: outrasTimeout,
     kibana: usado ? CVC.urlKibana(usado) : null,

@@ -69,19 +69,19 @@ function coletando(e) {
   return topo(e) + cabecalhoRota(e.cfg, status("vivo", fase));
 }
 
-// O cartao principal: menor preco da CVC x menor preco da Decolar, lado a
+// O cartao principal: menor preco da CVC x menor preco do Concorrente 1 (Decolar), lado a
 // lado, e a diferenca entre os dois.
 function veredito(d, rival) {
   if (d == null) return "";
   if (Math.abs(d) < 0.05) return `<div class="veredito empate">CVC e ${esc(rival)} empatam</div>`;
   const quanto = dif(Math.abs(d)).replace("+", "");
   return d < 0
-    ? `<div class="veredito bom">CVC ${quanto} mais barata que a ${esc(rival)}</div>`
-    : `<div class="veredito ruim">CVC ${quanto} mais cara que a ${esc(rival)}</div>`;
+    ? `<div class="veredito bom">CVC ${quanto} mais barata que o ${esc(rival)}</div>`
+    : `<div class="veredito ruim">CVC ${quanto} mais cara que o ${esc(rival)}</div>`;
 }
 
 function destaque(e) {
-  const rival = e.rival || "Decolar";
+  const rival = e.rival || "Concorrente 1";
   const lado = (classe, nome, valor, nota) => `<div class="lado ${classe}">
       <div class="rotulo">${esc(nome)}</div>
       <div class="preco">${valor == null ? "—" : brl(valor)}</div>
@@ -89,7 +89,7 @@ function destaque(e) {
   const f = e.frente_a_frente || { cvc: 0, rival: 0, empate: 0 };
   const disputados = f.cvc + f.rival + f.empate;
   const frente = disputados
-    ? `<div class="frente">Nos ${disputados} voo(s) que as duas vendem:
+    ? `<div class="frente">Nos ${disputados} voo(s) que os dois vendem:
        CVC mais barata em <b>${f.cvc}</b> · ${esc(rival)} em <b>${f.rival}</b>
        ${f.empate ? `· empate em <b>${f.empate}</b>` : ""}</div>` : "";
   const total = e.total_itinerarios || 0;
@@ -104,6 +104,7 @@ function destaque(e) {
     ${veredito(e.delta_rival, rival)}
     ${frente}
   </div>
+  ${extremos(e)}
   ${cobertura(e, rival)}`;
 }
 
@@ -111,36 +112,58 @@ function destaque(e) {
 function barraDupla(cvcN, rivN, total, rival) {
   const larg = (n) => (total ? (n / total * 100).toFixed(1) : 0);
   return `<div class="duas">
-    <div class="linha-barra"><span class="marca cvc">CVC</span>
+    <div class="linha-barra larga"><span class="marca cvc">CVC</span>
       <span class="barra"><i class="cvc" style="width:${larg(cvcN)}%"></i></span>
       <b>${total ? pct(cvcN / total) : "—"}</b></div>
-    <div class="linha-barra"><span class="marca rival">${esc(rival)}</span>
+    <div class="linha-barra larga"><span class="marca rival">${esc(rival)}</span>
       <span class="barra"><i class="rival" style="width:${larg(rivN)}%"></i></span>
       <b>${total ? pct(rivN / total) : "—"}</b></div>
   </div>`;
 }
+// Nome de exibicao + cor de cada agencia ja vem do coletor (APELIDOS).
+const marca = (ag) => `<span class="marca ${esc(ag.cor || "outra")}">${esc(ag.rotulo || ag.nome)}</span>`;
+
+// Menor e maior preco da busca inteira, de qualquer agencia. Menor da Zupper
+// (Concorrente 3) pinta o quadro de azul Tiffany.
+function extremos(e) {
+  const mn = e.menor_geral, mx = e.maior_geral;
+  if (!mn || mn.valor == null) return "";
+  const quem = (ags) => (ags || []).map((a) => esc(a.rotulo || a.nome)).join(", ") || "—";
+  const tiffany = (mn.agencias || []).some((a) => a.cor === "tiffany");
+  return `<div class="cartao">
+    <div class="cobertura-topo"><span class="rotulo">Preços da busca</span>
+      <span class="suave">todas as agências</span></div>
+    <div class="extremos">
+      <div class="extremo ${tiffany ? "tiffany" : ""}">
+        <div class="rotulo">Menor preço</div>
+        <div class="preco">${brl(mn.valor)}</div>
+        <div class="quem">${quem(mn.agencias)}</div></div>
+      <div class="extremo">
+        <div class="rotulo">Maior preço</div>
+        <div class="preco">${brl(mx && mx.valor)}</div>
+        <div class="quem">${quem(mx && mx.agencias)}</div></div>
+    </div></div>`;
+}
+
+// Cobertura por agencia: em quantos dos voos da busca cada uma tem oferta.
+const MAX_AGENCIAS = 10;
 function cobertura(e, rival) {
   const total = e.total_itinerarios || 0;
-  const cvcN = e.itinerarios_do_agente || 0, rivN = e.itinerarios_do_rival || 0;
-  let leitura = "";
-  if (total && (cvcN || rivN)) {
-    if (cvcN === rivN) leitura = "mesma cobertura";
-    else {
-      const maior = cvcN > rivN ? "CVC" : rival;
-      const vezes = Math.min(cvcN, rivN) ? (Math.max(cvcN, rivN) / Math.min(cvcN, rivN)) : null;
-      leitura = `${esc(maior)} tem ${Math.abs(cvcN - rivN)} voo(s) a mais`
-        + (vezes ? ` (${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}×)` : "");
-    }
-  }
+  const ags = e.por_agente || [];
+  const linhas = ags.slice(0, MAX_AGENCIAS).map((a) => {
+    const larg = total ? (a.voos / total * 100).toFixed(1) : 0;
+    return `<div class="linha-barra larga">${marca(a)}
+      <span class="barra"><i class="${esc(a.cor || "outra")}" style="width:${larg}%"></i></span>
+      <span class="num-cob"><b>${total ? pct(a.voos / total) : "—"}</b> <span class="fraco">${a.voos}</span></span></div>`;
+  }).join("");
+  const resto = ags.length > MAX_AGENCIAS
+    ? `<div class="frente">e mais ${ags.length - MAX_AGENCIAS} agência(s) — todas vão no Excel</div>` : "";
   return `<div class="cartao">
-    <div class="cobertura-topo"><span class="rotulo">Cobertura</span>
-      <span class="suave">de ${total} voos na busca</span></div>
-    ${barraDupla(cvcN, rivN, total, rival)}
-    <div class="numeros-cob">
-      <span><b>${cvcN}</b> voos CVC</span>
-      <span><b>${rivN}</b> voos ${esc(rival)}</span>
-    </div>
-    ${leitura ? `<div class="frente">${leitura}</div>` : ""}
+    <div class="cobertura-topo"><span class="rotulo">Cobertura por concorrente</span>
+      <span class="suave">${ags.length} agências · ${total} voos</span></div>
+    <div class="duas">${linhas || '<span class="fraco">sem agências</span>'}</div>
+    <div class="legenda-cob suave">% dos voos da busca com oferta · nº de voos</div>
+    ${resto}
   </div>`;
 }
 
@@ -280,7 +303,7 @@ function pronto(e) {
   if (!e.busca_completou)
     avisos.push("A busca não chegou a completar — os números podem estar incompletos.");
   if (!e.rival_participa_da_busca)
-    avisos.push(`A ${e.rival || "Decolar"} não aparece entre as agências desta busca.`);
+    avisos.push(`O ${e.rival || "Concorrente 1"} não aparece entre as agências desta busca.`);
   if (!e.agente_participa_da_busca)
     avisos.push(`O agente ${e.agente} não aparece entre os agentes desta busca.`);
   return topo(e)
@@ -289,7 +312,7 @@ function pronto(e) {
     + destaque(e)
     + kpis(e)
     + `<h2>Por companhia</h2><div class="cartao">${
-        (e.por_cia || []).map((l) => cia(l, e.rival || "Decolar")).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
+        (e.por_cia || []).map((l) => cia(l, e.rival || "Concorrente 1")).join("") || '<span class="fraco">Nenhum itinerário.</span>'}</div>`
     + posicoes(e.posicoes)
     + combinadas(e.combinadas)
     + `<h2>Detalhes</h2>` + log(e);
@@ -333,7 +356,7 @@ function cartaoHistorico() {
   return `<h2>Histórico de buscas</h2><div class="cartao">
     <div class="cobertura-topo"><span><b>${n}</b> busca${n === 1 ? "" : "s"} gravada${n === 1 ? "" : "s"}</span>
       <span class="suave">${desde ? `desde ${esc(desde)}` : "neste navegador"}</span></div>
-    ${n ? `<table class="hist"><thead><tr><th>Rota</th><th>CVC</th><th>Decolar</th><th>%</th></tr></thead>
+    ${n ? `<table class="hist"><thead><tr><th>Rota</th><th>CVC</th><th>Conc. 1</th><th>%</th></tr></thead>
       <tbody>${linhas}</tbody></table>`
         : '<div class="suave">Cada busca analisada vira uma linha aqui.</div>'}
     <div class="botoes-hist">

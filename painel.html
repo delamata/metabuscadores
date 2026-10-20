@@ -11,6 +11,8 @@
     --azul: #2563eb; --sky: #0770e3; --kayak: #ff690f; 
     /* cores das marcas: CVC amarelo + azul-marinho; Decolar roxo + branco */
     --cvc: #ffe000; --cvc-tinta: #0b2a6f; --decolar: #4b00d1; --decolar-tinta: #ffffff;
+    /* Concorrente 3 (Zupper) com o menor preco: azul Tiffany */
+    --tiffany: #81d8d0; --tiffany-tinta: #08312e; --outra: #9ca3af;
     --bom: #15803d; --bom-f: #dcfce7; --ruim: #b91c1c; --ruim-f: #fee2e2;
     --alerta: #92400e; --alerta-f: #fef3c7; --barra: #e5e7eb;
   }
@@ -70,6 +72,21 @@
            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .marca.cvc { background: var(--cvc); color: var(--cvc-tinta); }
   .marca.rival { background: var(--decolar); color: var(--decolar-tinta); }
+  .marca.tiffany { background: var(--tiffany); color: var(--tiffany-tinta); }
+  .marca.outra { background: var(--fundo); color: var(--suave); border: 1px solid var(--linha); }
+  .barra i.tiffany { background: var(--tiffany); }
+  .barra i.outra { background: var(--outra); }
+  .linha-barra.larga { grid-template-columns: 104px 1fr 62px; }
+  .num-cob { text-align: right; white-space: nowrap; }
+  .legenda-cob { font-size: 10.5px; margin-top: 6px; text-align: right; }
+  .extremos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .extremo { border-radius: 10px; padding: 10px; text-align: center; background: var(--fundo);
+             border: 1px solid var(--linha); }
+  .extremo .rotulo { font-size: 11px; }
+  .extremo .preco { font-size: clamp(15px, 5vw, 20px); font-weight: 800; margin-top: 2px; white-space: nowrap; }
+  .extremo .quem { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .extremo.tiffany { background: var(--tiffany); color: var(--tiffany-tinta); border-color: var(--tiffany); }
+  .extremo.tiffany .rotulo { color: inherit; opacity: .8; }
   .numeros-cob { display: flex; justify-content: space-between; margin-top: 6px;
                  font-size: 11px; color: var(--suave); }
   .cia-cob { margin-top: 8px; }
