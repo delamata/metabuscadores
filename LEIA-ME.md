@@ -50,15 +50,25 @@ numero fixo por agencia (ver abaixo). A Decolar e sempre o Player 1.
    menor e o maior preco da busca inteira, de qualquer agencia, com quem
    ofereceu. O quadro ganha a cor da marca da agencia.
 3. **Melhor preco por concorrente** — o menor preco de cada agencia, do mais
-   barato ao mais caro, com a CVC destacada na lista e a % da CVC sobre cada
-   concorrente (mesma conta do item 1; + vermelho = CVC mais cara).
+   barato ao mais caro, com a % da CVC sobre cada concorrente (mesma conta do
+   item 1; + vermelho = CVC mais cara). **Top 10 players**; a CVC aparece
+   sempre, destacada, fora da contagem. O Excel traz todas as agencias.
 4. **Cobertura por concorrente** — % dos voos da busca em que cada agencia tem
-   oferta, e quantos voos.
+   oferta, e quantos voos. Tambem **top 10 players** + CVC.
 5. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
    no top 10 de Recomendados.
 6. **Por companhia** — menor preco CVC x Player 1, a diferenca em %, a
    cobertura dos dois e o selo de tempo da fonte no ConectaAS (vermelho quando
    deu timeout). As companhias aereas (LATAM, GOL, Azul...) aparecem pelo nome.
+   **Quando a CVC nao retorna numa companhia**, o painel diz por que
+   (`CVC.motivoSemCvc`, do mais especifico ao mais generico): a CVC nao
+   participou da busca; a fonte da cia deu timeout no ConectaAS; a fonte
+   falhou (com a mensagem); a fonte respondeu mas a CVC ficou sem oferta; log
+   do ConectaAS indisponivel; busca nao encontrada no log; nenhuma fonte
+   mapeada para a cia; fonte mapeada que nao aparece no log. Com o log fora
+   do ar (proxy ES sem endereco certo), o motivo sai como "indisponivel".
+   O nome da cia no Kayak ("GOL", "LATAM") e casado com o do mapa de fontes
+   (`CVC.ciaCanonica`).
 7. **Posicoes**, **combinacoes de companhias**, **historico** e, recolhidos, o
    **log do ConectaAS** (links para o Kibana) e o **diagnostico**.
 
@@ -134,7 +144,8 @@ total e as ultimas 5, e tem:
   Player 2 (Zupper), Concorrente + Barato (preco e quem), Concorrente + Caro
   (preco e quem), frente a frente (voos CVC mais barata, Player 1 mais
   barato, empatados), 1a posicao CVC, CVC no top 10, Agencias na busca, Melhor
-  preco por concorrente, Cobertura por agencia e Busca completa. Coberturas sao
+  preco por concorrente, Cobertura por agencia, Cias sem CVC (motivo) e Busca
+  completa. Coberturas sao
   calculadas na exportacao; buscas gravadas antes desta versao saem com as
   colunas novas vazias.
 - **Limpar historico** — pede dois cliques.
