@@ -38,12 +38,12 @@ mostra de qual site veio a busca.
 
 ## O que o painel mostra
 
-**So a CVC aparece com o nome real.** Cada concorrente vira "Player - " + um
-sufixo em maiusculas que nao expoe o nome (ver abaixo).
+**So a CVC aparece com o nome real.** Cada concorrente vira "Player N", com
+numero fixo por agencia (ver abaixo). A Decolar e sempre o Player 1.
 
-1. **CVC x Player - DCL** (Decolar) — no topo, lado a lado: o menor preco
-   da CVC e o do Player - DCL na busca, e a diferenca em % ("CVC 1,6% mais
-   barata que o Player - DCL"). A % e sobre o preco do concorrente:
+1. **CVC x Player 1** (Decolar) — no topo, lado a lado: o menor preco
+   da CVC e o do Player 1 na busca, e a diferenca em % ("CVC 1,6% mais
+   barata que o Player 1"). A % e sobre o preco do concorrente:
    `(CVC - concorrente) / concorrente`. Logo abaixo, o **frente a frente**: nos
    voos que os dois vendem, em quantos cada um e mais barato.
 2. **Precos da busca** — **Concorrente + Barato** e **Concorrente + Caro**: o
@@ -56,7 +56,7 @@ sufixo em maiusculas que nao expoe o nome (ver abaixo).
    oferta, e quantos voos.
 5. **Numeros da busca** — voos na busca, 1a posicao da CVC e quantos voos CVC
    no top 10 de Recomendados.
-6. **Por companhia** — menor preco CVC x Player - DCL, a diferenca em %, a
+6. **Por companhia** — menor preco CVC x Player 1, a diferenca em %, a
    cobertura dos dois e o selo de tempo da fonte no ConectaAS (vermelho quando
    deu timeout). As companhias aereas (LATAM, GOL, Azul...) aparecem pelo nome.
 7. **Posicoes**, **combinacoes de companhias**, **historico** e, recolhidos, o
@@ -64,27 +64,34 @@ sufixo em maiusculas que nao expoe o nome (ver abaixo).
 
 ### Rotulos e cores dos concorrentes
 
-Tudo em `APELIDOS`, no topo do `coletor.js`, e `CVC.rotulosDaBusca` /
-`CVC.sufixoDe` no `analise.js`:
+Catalogo `AGENCIAS` no topo da secao de rotulos do `analise.js` (usado pelo
+coletor e pelo painel): `re` reconhece a agencia, `numero` e o Player, `cor`
+a classe CSS da marca e `antigo` o sufixo da v0.14.0 (para converter o
+historico).
 
-| agencia | rotulo | cor |
+| Player | agencia | cor |
 |---|---|---|
-| Decolar | Player - DCL | roxo |
-| Zupper | Player - ZPR | azul Tiffany |
-| MaxMilhas | Player - MXM | verde |
-| 123milhas | Player - MLS | azul-marinho |
-| GOL | Player - GLO | laranja |
-| LATAM | Player - LTM | vermelho |
-| Azul | Player - ZLA | azul |
-| demais | Player - + sufixo derivado | cinza |
+| 1 | Decolar | roxo |
+| 2 | Zupper | azul Tiffany |
+| 3 | MaxMilhas | verde |
+| 4 | 123milhas | azul-marinho |
+| 5 | VaidePromo | cinza |
+| 6 | Trip.com | cinza |
+| 7 | ViajaNet | cinza |
+| 8 | Booking.com | cinza |
+| 9 | Azul / Azul Viagens | azul |
+| 10 | GOL | laranja |
+| 11 | LATAM | vermelho |
+| 12-23 | Gotogate, Mytrip, Kiwi.com, Submarino Viagens, eDreams, Expedia, Smiles, Passagens Promo, Hurb, Kissandfly, Voopter, Edestinos | cinza |
 
-Rotulo: "Player - " + sufixo sempre em maiusculas. Linhas do historico
-gravadas com o rotulo antigo ("Concorrente dcl", v0.13.0) sao convertidas na
-leitura. Sufixo derivado (mesma regra dos fixos): as 3 primeiras consoantes do nome,
-ignorando digitos e "h", sem repetir letra seguida; com menos de 3 consoantes,
-completa com as vogais (GOL -> GLO). Colisao ganha numero (MLS2). Como depende
-so do nome, a mesma agencia tem sempre o mesmo rotulo — em qualquer busca e no
-Excel. As cores ficam em variaveis no topo do `painel.html` (`--cvc`,
+O numero e o mesmo em qualquer busca, em qualquer computador e no Excel.
+**Agencia fora do catalogo** recebe o proximo numero livre (24, 25...) na
+primeira vez que aparece e o mantem: fica no registro `players` do
+`chrome.storage.local`. Esse registro e de cada navegador — em dois
+computadores a mesma agencia nova pode ganhar numeros diferentes; para fixar,
+inclua-a no catalogo. Linhas do historico gravadas com rotulos antigos
+("Concorrente dcl" na v0.13.0, "Player - DCL" na v0.14.0) saem no Excel como
+"Player N". As cores ficam em variaveis no topo do `painel.html` (`--cvc`,
 `--decolar`, `--tiffany`, `--maxmilhas`, `--milhas123`, `--gol`, `--latam`,
 `--azulcia`); os sites das marcas estavam fora de alcance ao montar, entao sao
 tons conhecidos de cada marca, para acertar num lugar so.
@@ -122,17 +129,17 @@ total e as ultimas 5, e tem:
 - **Exportar para Excel** — CSV no padrao do Excel em portugues (`;`, virgula
   decimal, acentos com BOM UTF-8), **sem nome real de concorrente**. Colunas:
   Data da busca, Hora, Site, Rota, Data Ida, Data Volta, Adultos, Preco CVC,
-  Preco Player - DCL, %Variacao, Voos CVC, Voos Player - DCL, Voos na
-  busca, Cobertura CVC %, Cobertura Player - DCL %, Preco/Voos/Cobertura
-  Player - ZPR, Concorrente + Barato (preco e quem), Concorrente + Caro
-  (preco e quem), frente a frente (voos CVC mais barata, Player - DCL mais
+  Preco Player 1, %Variacao, Voos CVC, Voos Player 1, Voos na
+  busca, Cobertura CVC %, Cobertura Player 1 %, Preco/Voos/Cobertura
+  Player 2 (Zupper), Concorrente + Barato (preco e quem), Concorrente + Caro
+  (preco e quem), frente a frente (voos CVC mais barata, Player 1 mais
   barato, empatados), 1a posicao CVC, CVC no top 10, Agencias na busca, Melhor
   preco por concorrente, Cobertura por agencia e Busca completa. Coberturas sao
   calculadas na exportacao; buscas gravadas antes desta versao saem com as
   colunas novas vazias.
 - **Limpar historico** — pede dois cliques.
 
-Regras: %Variacao = (preco CVC menos preco Player - DCL) dividido pelo preco Player - DCL
+Regras: %Variacao = (preco CVC menos preco Player 1) dividido pelo preco Player 1
 (positivo = CVC mais cara), a
 mesma do painel. Sem oferta de uma das duas, o preco e a % ficam **vazios**,
 nunca zero. A mesma rota buscada duas vezes gera duas linhas, cada uma com sua
