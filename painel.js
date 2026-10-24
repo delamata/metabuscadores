@@ -432,6 +432,90 @@ async function limpaHistorico(botao) {
   await chrome.storage.local.remove(historico.map((l) => l.chave));
 }
 
+// ---- rotina automatica -------------------------------------------------------- #
+// Status e controle da rotina (rotina.js + servico.js). Carregada a parte e
+// recarregada quando "rotina", "rodada" ou "rodadas" mudam.
+let rotina = { cfg: ROTINA.config(), rodada: null, rodadas: [], proximas: [] };
+
+async function carregaRotina() {
+  try {
+    const t = await chrome.storage.local.get(["rotina", "rodada", "rodadas"]);
+    rotina.cfg = ROTINA.config(t.rotina);
+    rotina.rodada = t.rodada || null;
+    rotina.rodadas = t.rodadas || [];
+    rotina.proximas = (await chrome.runtime.sendMessage({ tipo: "rotina-proximas" })) || [];
+  } catch (e) { /* sem service worker: mostra so a config */ }
+}
+
+const ROTULO_ST = { pendente: "na fila", aberta: "buscando…", ok: "ok", sem_dados: "sem dados",
+                    bloqueio: "verificação de robô", aba_fechada: "aba fechada", cancelada: "cancelada" };
+const hora = (t) => new Date(t).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+
+function cartaoRotina() {
+  const c = rotina.cfg, r = rotina.rodada;
+  const emAndamento = r && !r.fim;
+  const ultima = rotina.rodadas[rotina.rodadas.length - 1];
+  const datas = ROTINA.datas(c, new Date());
+  const fila = emAndamento ? `<div class="fila">${r.fila.map((it) =>
+    `<div><span>${esc(it.rota)}</span><span class="st ${esc(it.status)}">${esc(ROTULO_ST[it.status] || it.status)}</span></div>`).join("")}</div>` : "";
+  return `<h2>Rotina automática</h2><div class="cartao">
+    <div class="rotina-linha"><span>${c.ativa ? "<b>Ativa</b>" : "<b>Pausada</b>"} · ${c.horarios.map(ROTINA.rotuloHorario).join(", ")}</span>
+      <span class="suave">${c.rotas.length} rotas · Kayak</span></div>
+    <div class="rotina-linha"><span class="suave">Próxima rodada</span>
+      <span>${c.ativa && rotina.proximas.length ? esc(hora(rotina.proximas[0])) : "—"}</span></div>
+    <div class="rotina-linha"><span class="suave">Datas buscadas</span>
+      <span>${dia(datas.ida)}${datas.volta ? ` → ${dia(datas.volta)}` : " · só ida"} · ${c.adultos} adulto${c.adultos > 1 ? "s" : ""}</span></div>
+    ${emAndamento ? `<div class="aviso">Rodada ${esc(r.horario)} em andamento — as abas abrem e fecham sozinhas.</div>${fila}`
+      : ultima ? `<div class="rotina-linha"><span class="suave">Última (${esc(ultima.id)})</span><span>${esc(ultima.resumo ? ultima.resumo.texto : "")}</span></div>` : ""}
+    <div class="botoes-hist">
+      <button id="rot-rodar" ${emAndamento ? "disabled" : ""}>Rodar agora</button>
+      <button id="rot-ativa">${c.ativa ? "Pausar" : "Ativar"}</button>
+      <button id="rot-relatorio">Abrir relatório</button>
+    </div>
+    <details data-k="rot-cfg"><summary>Configurar</summary>
+      <div class="form-rotina">
+        <label class="largo">Rotas (uma por linha, ORIGEM-DESTINO)<textarea id="rot-rotas" rows="5">${esc(c.rotas.join("\n"))}</textarea></label>
+        <label>Horários (h)<input id="rot-horas" value="${esc(c.horarios.join(", "))}"></label>
+        <label>Adultos<input id="rot-adultos" type="number" min="1" max="9" value="${c.adultos}"></label>
+        <label>Ida daqui a (dias)<input id="rot-dias" type="number" min="1" max="330" value="${c.dias_ida}"></label>
+        <label>Noites (0 = só ida)<input id="rot-noites" type="number" min="0" max="60" value="${c.noites}"></label>
+      </div>
+      <div class="botoes-hist"><button id="rot-salvar">Salvar</button> <span id="rot-ok" class="suave"></span></div>
+      <div class="suave" style="margin-top:6px">Roda no Chrome deste computador: ele precisa estar ligado e com o Chrome aberto.
+        Uma rota por vez, numa aba em segundo plano. Se o Kayak pedir verificação de robô, a rodada para — nada é contornado.</div>
+    </details>
+  </div>`;
+}
+
+async function salvaRotina(parcial) {
+  const atual = (await chrome.storage.local.get("rotina")).rotina || {};
+  await chrome.storage.local.set({ rotina: Object.assign({}, atual, parcial) });
+}
+
+function ligaRotina() {
+  const b = (id) => document.getElementById(id);
+  if (!b("rot-rodar")) return;
+  b("rot-rodar").onclick = async () => {
+    const r = await chrome.runtime.sendMessage({ tipo: "rotina-rodar" });
+    if (r && !r.ok) b("rot-rodar").textContent = r.erro;
+  };
+  b("rot-ativa").onclick = () => salvaRotina({ ativa: !rotina.cfg.ativa });
+  b("rot-relatorio").onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("relatorio.html") });
+  b("rot-salvar").onclick = async () => {
+    const rotas = b("rot-rotas").value.split(/[\s,;]+/).map((x) => x.trim().toUpperCase()).filter(Boolean);
+    const invalidas = rotas.filter((r) => !ROTINA.rotaValida(r));
+    if (invalidas.length) { b("rot-ok").textContent = `rota inválida: ${invalidas.join(", ")}`; return; }
+    const horarios = b("rot-horas").value.split(/[\s,;]+/).filter(Boolean).map(Number);
+    if (!horarios.length || horarios.some((h) => !Number.isInteger(h) || h < 0 || h > 23)) {
+      b("rot-ok").textContent = "horários: números de 0 a 23"; return;
+    }
+    await salvaRotina({ rotas, horarios, adultos: Number(b("rot-adultos").value) || 1,
+                        dias_ida: Number(b("rot-dias").value) || 30, noites: Math.max(0, Number(b("rot-noites").value) || 0) });
+    for (const el of document.querySelectorAll(".form-rotina [id]")) delete el.dataset.mexido;
+    b("rot-ok").textContent = "salvo";
+  };
+}
+
 // ---- desenho --------------------------------------------------------------- #
 function desenha(e) {
   if (!e) return;
@@ -440,32 +524,45 @@ function desenha(e) {
     : e.estado === "coletando" ? coletando(e) : vigiando(e);
   // a batida redesenha a cada 3s; sem isto os <details> fechariam sozinhos
   const abertos = new Set([...app.querySelectorAll("details[open]")].map((d) => d.dataset.k));
-  // ...nem o campo do endereco perderia o que esta sendo digitado
-  const campo = document.getElementById("es-url");
-  const rascunho = campo && campo.dataset.mexido ? campo.value : null;
-  const comFoco = campo && document.activeElement === campo;
-  const cursor = campo ? campo.selectionStart : null;
+  // ...nem os campos (endereco do proxy, config da rotina) perderiam o que
+  // esta sendo digitado: guarda rascunho, foco e cursor de cada um
+  const rascunhos = {};
+  for (const el of app.querySelectorAll("input[id], textarea[id]"))
+    if (el.dataset.mexido) rascunhos[el.id] = el.value;
+  const foco = document.activeElement && document.activeElement.id;
+  const cursor = foco && document.activeElement.selectionStart;
   // o campo do endereco aparece junto do erro do log; sem erro, fica no Diagnostico
   const erroLog = e.estado === "pronto" && e.log && e.log.erro;
-  app.innerHTML = corpo + cartaoHistorico() + diagnostico(e.diagnostico, !erroLog);
-  const novo = document.getElementById("es-url");
-  if (novo && rascunho !== null) { novo.value = rascunho; novo.dataset.mexido = "1"; }
-  if (novo && comFoco) { novo.focus(); if (cursor !== null) novo.setSelectionRange(cursor, cursor); }
+  app.innerHTML = corpo + cartaoRotina() + cartaoHistorico() + diagnostico(e.diagnostico, !erroLog);
+  for (const [id, v] of Object.entries(rascunhos)) {
+    const el = document.getElementById(id);
+    if (el) { el.value = v; el.dataset.mexido = "1"; }
+  }
+  for (const el of app.querySelectorAll("input[id], textarea[id]"))
+    el.addEventListener("input", () => { el.dataset.mexido = "1"; });
+  const f = foco && document.getElementById(foco);
+  if (f && f.focus) { f.focus(); try { if (cursor != null) f.setSelectionRange(cursor, cursor); } catch (e) { /* number */ } }
   for (const d of app.querySelectorAll("details")) if (abertos.has(d.dataset.k)) d.open = true;
   for (const bb of app.querySelectorAll("button.baixar")) bb.onclick = () => baixar(bb);
   const b = document.getElementById("permissao");
   if (b) b.onclick = () => chrome.permissions.request(
     { origins: [b.dataset.origem || "https://api-java-soap-partnership.k8s-cvc.com.br/*"] });
   ligaConfigEs();
+  ligaRotina();
   const ex = document.getElementById("hist-exportar");
   if (ex) ex.onclick = exportaHistorico;
   const lp = document.getElementById("hist-limpar");
   if (lp) lp.onclick = () => limpaHistorico(lp);
 }
 
-carregaHistorico().then(() => chrome.storage.local.get("estado")).then(({ estado }) => desenha(estado));
+Promise.all([carregaHistorico(), carregaRotina()]).then(() => chrome.storage.local.get("estado"))
+  .then(({ estado }) => desenha(estado || { estado: "vigiando" }));
 chrome.storage.onChanged.addListener(async (mud, area) => {
   if (area !== "local") return;
+  if (mud.rotina || mud.rodada || mud.rodadas) {
+    await carregaRotina();
+    if (!mud.estado && ultimoEstado) desenha(ultimoEstado);
+  }
   if (Object.keys(mud).some((k) => k.startsWith(HIST.PREFIXO))) {
     await carregaHistorico();
     if (!mud.estado && ultimoEstado) desenha(ultimoEstado);

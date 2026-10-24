@@ -119,6 +119,9 @@ var HIST = (() => {
     // "GOL: Fonte SGOL deu timeout em 6.000 ms no ConectaAS... | LATAM: ..."
     ["Cias sem CVC (motivo)", (l) => (l.sem_cvc || []).map((x) => `${x.cia}: ${x.motivo}`).join(" | ")],
     ["Busca completa", (l) => (l.busca_completa ? "sim" : "não")],
+    // rotina automatica (servico.js marca a linha) ou busca feita a mao
+    ["Origem", (l) => (l.origem === "rotina" ? "rotina" : "manual")],
+    ["Rodada", (l) => l.rodada || ""],
   ];
 
   // % dos voos da busca em que a agencia tem oferta; sem total, vazio

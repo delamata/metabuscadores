@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório — Metabuscadores CVC</title>
+<style>
+  :root {
+    --tinta: #111827; --suave: #4b5563; --fraco: #9ca3af; --linha: #e5e7eb;
+    --fundo: #f6f7f9; --cartao: #ffffff; --azul: #2563eb;
+    --cvc: #ffe000; --cvc-tinta: #0b2a6f; --decolar: #4b00d1;
+    --bom: #15803d; --bom-f: #dcfce7; --ruim: #b91c1c; --ruim-f: #fee2e2;
+    --alerta: #92400e; --alerta-f: #fef3c7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --tinta: #f3f4f6; --suave: #c4c9d2; --fraco: #8b93a1; --linha: #2d333d;
+      --fundo: #14171c; --cartao: #1c2027;
+      --bom: #4ade80; --bom-f: #14301f; --ruim: #f87171; --ruim-f: #3a1717;
+      --alerta: #fcd34d; --alerta-f: #3a2e12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header img { width: 40px; height: 40px; }
+  header h1 { font-size: 20px; margin: 0; flex: 1; }
+  .sub { color: var(--suave); margin: 4px 0 0; }
+  button { font: inherit; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+           border: 1px solid var(--linha); background: var(--cartao); color: var(--tinta); }
+  button.prim { background: var(--cvc); color: var(--cvc-tinta); border-color: var(--cvc); font-weight: 700; }
+  h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+       color: var(--fraco); margin: 28px 0 8px; }
+  .cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 14px 16px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
+  .kpi { background: var(--cartao); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 14px; }
+  .kpi b { display: block; font-size: 24px; }
+  .kpi span { color: var(--suave); font-size: 12px; }
+  .rolagem { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+       color: var(--fraco); padding: 6px 8px; border-bottom: 1px solid var(--linha); white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  td.rota { white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .tag { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+  .tag.bom { color: var(--bom); background: var(--bom-f); }
+  .tag.ruim { color: var(--ruim); background: var(--ruim-f); }
+  .tag.neutro { color: var(--suave); background: var(--fundo); }
+  .cel { text-align: center; white-space: nowrap; }
+  .fraco { color: var(--fraco); } .suave { color: var(--suave); }
+  .aviso { padding: 8px 12px; border-radius: 10px; color: var(--alerta); background: var(--alerta-f); font-size: 13px; }
+  .pequeno { font-size: 12px; }
+  .vazio { text-align: center; padding: 40px 16px; color: var(--suave); }
+  @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  @media print {
+    body { background: #fff; color: #000; }
+    .nao-imprime { display: none !important; }
+    .cartao, .kpi { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main id="rel"><div class="vazio">Carregando…</div></main>
+<script src="analise.js"></script>
+<script src="historico.js"></script>
+<script src="rotina.js"></script>
+<script src="relatorio.js"></script>
+</body>
+</html>

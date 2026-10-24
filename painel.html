@@ -197,6 +197,18 @@
   .botoes-hist { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
   button.perigo { color: var(--ruim); }
   button:disabled { opacity: .5; cursor: default; }
+  .rotina-linha { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; font-size: 12px; }
+  .fila { margin-top: 8px; display: grid; gap: 3px; }
+  .fila div { display: flex; justify-content: space-between; font-size: 12px; }
+  .st { font-size: 11px; padding: 0 6px; border-radius: 999px; background: var(--fundo); border: 1px solid var(--linha); }
+  .st.ok { color: var(--bom); background: var(--bom-f); border-color: transparent; }
+  .st.aberta { color: var(--azul); }
+  .st.bloqueio, .st.sem_dados, .st.aba_fechada, .st.cancelada { color: var(--ruim); background: var(--ruim-f); border-color: transparent; }
+  .form-rotina { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 8px; font-size: 12px; }
+  .form-rotina label { display: grid; gap: 2px; color: var(--suave); }
+  .form-rotina input, .form-rotina textarea { font: 12px ui-monospace, monospace; padding: 5px 7px; border-radius: 6px;
+    border: 1px solid var(--linha); background: var(--fundo); color: var(--tinta); }
+  .form-rotina .largo { grid-column: 1 / -1; }
   .erro-det { margin-top: 4px; font-size: 11px; word-break: break-all; opacity: .9; }
   #es-url { width: 100%; margin-top: 8px; padding: 6px 8px; border-radius: 8px; font: 12px ui-monospace, monospace;
             border: 1px solid var(--linha); background: var(--fundo); color: var(--tinta); }
@@ -211,6 +223,7 @@
 </div>
 <script src="analise.js"></script>
 <script src="historico.js"></script>
+<script src="rotina.js"></script>
 <script src="painel.js"></script>
 </body>
 </html>

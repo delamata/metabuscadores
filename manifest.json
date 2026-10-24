@@ -12,14 +12,20 @@
   "permissions": [
     "sidePanel",
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "alarms",
+    "notifications"
   ],
   "optional_host_permissions": [
     "https://*.k8s-cvc.com.br/*",
     "https://*.cvc.com.br/*"
   ],
   "host_permissions": [
-    "https://api-java-soap-partnership.k8s-cvc.com.br/*"
+    "https://api-java-soap-partnership.k8s-cvc.com.br/*",
+    "https://www.kayak.com.br/*",
+    "https://kayak.com.br/*",
+    "https://www.skyscanner.com.br/*",
+    "https://www.skyscanner.net/*"
   ],
   "background": {
     "service_worker": "servico.js"

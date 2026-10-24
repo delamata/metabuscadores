@@ -72,7 +72,7 @@ test("CSV no padrao do Excel pt-BR: BOM, ponto e virgula, virgula decimal", () =
     + "%Variação;Voos CVC;Voos Player 1;Voos na busca;Cobertura CVC %;Cobertura Player 1 %;"
     + "Preço Player 2;Voos Player 2;Cobertura Player 2 %;Concorrente + Barato (preço);Concorrente + Barato;"
     + "Concorrente + Caro (preço);Concorrente + Caro;Voos CVC mais barata;Voos Player 1 mais barato;"
-    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Melhor preço por concorrente;Cobertura por agência;Cias sem CVC (motivo);Busca completa");
+    + "Voos empatados;1ª posição CVC;CVC no top 10;Agências na busca;Melhor preço por concorrente;Cobertura por agência;Cias sem CVC (motivo);Busca completa;Origem;Rodada");
   const c = linha.split(";");
   assert.equal(c[2], "Kayak");
   assert.equal(c[3], "SAO-MCZ");
