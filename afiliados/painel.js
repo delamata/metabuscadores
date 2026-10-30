@@ -1,92 +1,97 @@
-// Painel do Afiliados: so desenha a leitura que o coletor publica em
-// "af_estado" e o historico "afh:...". So a CVC aparece com o nome real.
+// Painel do Afiliados: so desenha a leitura do post de promocao que o coletor
+// publica em "af_estado" e o historico "afh:...". So a CVC aparece com o nome real.
 const app = document.getElementById("app");
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const brl = (v) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: v % 1 ? 2 : 0 }));
-const dif = (d) => `${d > 0 ? "+" : ""}${d.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 const marca = (a) => `<span class="marca ${esc(a.cor || "")}">${esc(a.rotulo)}</span>`;
-const TIPO = { passagem: "Passagem", pacote: "Pacote", hotel: "Hotel", cruzeiro: "Cruzeiro", carro: "Carro", outro: "Outro" };
 
 function topo() {
   return `<div class="topo"><img src="icones/icone32.png" alt=""><b>Afiliados CVC</b><span class="chip">Melhores Destinos</span></div>`;
 }
 
 function kpis(e) {
-  const r = e.resumo;
+  const r = e.resumo, v = e.vendedores;
   return `<div class="kpis">
-    <div class="kpi"><b>${r.total}</b><span>ofertas na página</span></div>
-    <div class="kpi cvc"><b>${r.cvc_ofertas}</b><span>com a CVC</span></div>
-    <div class="kpi"><b>${r.concorrentes_ofertas}</b><span>de concorrentes</span></div>
+    <div class="kpi"><b>${r.trechos}</b><span>trechos com preço</span></div>
+    <div class="kpi"><b>${brl(r.menor)}</b><span>menor preço</span></div>
+    <div class="kpi ${v.cvc ? "cvc" : "sem-cvc"}"><b>${v.cvc ? "Sim" : "Não"}</b><span>CVC no buscador</span></div>
   </div>`;
 }
 
-// Quantidade de ofertas por player (CVC sempre na lista, mesmo com 0)
-function porPlayer(e) {
-  const r = e.resumo;
-  const lista = r.por_agencia.slice();
-  if (!lista.some((a) => a.id === "cvc")) lista.push({ id: "cvc", rotulo: "CVC", cor: "cvc", ofertas: 0, menor: null });
-  const max = Math.max(1, ...lista.map((a) => a.ofertas));
-  const linhas = lista.map((a) => `<div class="linha-barra">${marca(a)}
-    <span class="barra"><i class="${esc(a.cor || "")}" style="width:${(a.ofertas / max * 100).toFixed(1)}%"></i></span>
-    <b>${a.ofertas}</b></div>`).join("");
-  const sem = r.semAgencia ? `<div class="fraco" style="margin-top:6px;font-size:11px">${r.semAgencia} oferta(s) sem agência identificada${
-    e.tipo === "lista" ? " (o título do card não cita agência — o vendedor aparece dentro do post)" : ""}.</div>` : "";
-  return `<h2>Ofertas por player</h2><div class="cartao">${linhas}${sem}</div>`;
-}
-
-// Comparativo: menor preco da CVC x menor preco de cada player
-function comparativo(e) {
-  const r = e.resumo;
-  if (!r.comparativo.length) return "";
-  if (r.cvc_menor == null) {
-    return `<h2>Comparativo de preço</h2><div class="cartao"><div class="aviso" style="margin-top:0">A CVC não tem oferta com preço nesta página.</div>
-      ${r.comparativo.map((c) => `<div class="comp">${marca(c)}<span class="suave">menor preço</span><span class="valor">${brl(c.menor)}</span></div>`).join("")}</div>`;
+// Vendedores do buscador do post: quem participa e quem o botao abre
+function buscador(e) {
+  const v = e.vendedores;
+  if (!v.lista.length) {
+    return `<h2>Buscador do post</h2><div class="cartao"><div class="fraco">Este post não traz a lista de vendedores do buscador.</div></div>`;
   }
-  const linhas = r.comparativo.map((c) => `<div class="comp">${marca(c)}
-    <span class="valor">${brl(c.menor)}</span>
-    <span>${c.dif == null ? '<span class="fraco">—</span>' : `<span class="tag ${c.dif <= 0 ? "bom" : "ruim"}">${dif(c.dif)}</span>`}</span></div>`).join("");
-  return `<h2>Comparativo de preço</h2><div class="cartao">
-    <div class="comp"><span class="marca cvc">CVC</span><span class="suave">menor preço CVC</span><span class="valor">${brl(r.cvc_menor)}</span></div>
-    ${linhas}
-    <div class="fraco" style="margin-top:6px;font-size:11px">% = CVC acima (+) ou abaixo (−) do menor preço do player: (CVC − player) ÷ player.</div></div>`;
+  const chips = v.lista.map((a) => `<div class="vend">${marca(a)}${a.primeiro ? '<span class="tag abre">o botão abre este</span>' : ""}</div>`).join("");
+  const semCvc = v.cvc ? "" : `<div class="aviso">A CVC não está entre os vendedores deste post.</div>`;
+  const cvcAtras = v.cvc && v.primeiro && v.primeiro.id !== "cvc"
+    ? `<div class="fraco nota">A CVC participa, mas o botão “Pesquisar” abre ${esc(v.primeiro.rotulo)} (prioridade do site).</div>` : "";
+  return `<h2>Buscador do post · ${v.lista.length} vendedor(es)</h2><div class="cartao">${chips}${semCvc}${cvcAtras}</div>`;
 }
 
-function ofertas(e) {
-  if (!e.ofertas.length) return `<div class="cartao vazio">Nenhuma oferta encontrada nesta página.</div>`;
-  const itens = e.ofertas.slice(0, 40).map((o) => `<div class="oferta">
-    <div class="t">${esc(e.tipo === "post" ? (o.texto || o.titulo) : o.titulo)}</div>
-    <div class="rodape">${o.agencias.map(marca).join("") || '<span class="fraco">sem agência</span>'}
-      <span>${esc(TIPO[o.tipo] || o.tipo)}</span>${o.quando ? `<span>· ${esc(o.quando)}</span>` : ""}
-      <span class="p">${brl(o.preco)}</span></div></div>`).join("");
-  const mais = e.ofertas.length > 40 ? `<div class="fraco" style="margin-top:6px">+${e.ofertas.length - 40} — todas vão no Excel</div>` : "";
-  return `<h2>Ofertas</h2><div class="cartao">${itens}${mais}</div>`;
+// O que da para comparar: o preco do titulo com a tabela, e por destino
+function precos(e) {
+  const r = e.resumo;
+  if (!r.trechos) {
+    const pq = !e.tem_precos ? "Este post não tem tabela de preços." : e.ativa === false ? "A promoção está encerrada." : "A tabela de trechos ainda não carregou.";
+    return `<h2>Preços</h2><div class="cartao vazio">${esc(pq)}</div>`;
+  }
+  const destinos = r.por_destino.map((d) => `<div class="comp"><span><b>${esc(d.nome)}</b> <span class="fraco">· ${d.n} trecho(s)</span></span>
+    <span class="suave">até ${brl(d.maior)}</span><span class="valor">${brl(d.menor)}</span></div>`).join("");
+  const titulo = e.preco_titulo != null && r.menor != null
+    ? `<div class="fraco nota">Título do post: a partir de ${brl(e.preco_titulo)} · ${e.preco_titulo === r.menor ? "confere com a tabela" : `tabela hoje: ${brl(r.menor)}`}</div>` : "";
+  return `<h2>Preço por destino</h2><div class="cartao">${destinos}
+    <div class="comp"><span class="suave">Mediana dos ${r.com_preco} trechos</span><span></span><span class="valor">${brl(r.mediana)}</span></div>${titulo}</div>`;
+}
+
+// A pagina nao diz de qual vendedor e cada preco: o comparativo CVC x Player
+// nao sai daqui. Dizemos isso em vez de inventar.
+function comparativo(e) {
+  if (!e.resumo.trechos) return "";
+  return `<h2>Comparativo de preço</h2><div class="cartao"><div class="aviso" style="margin-top:0">
+    O post mostra o <b>menor preço de cada trecho</b>, sem dizer de qual vendedor ele é. Por isso o comparativo CVC × Player
+    não sai desta página — só a presença de cada um no buscador e os preços da promoção.</div></div>`;
+}
+
+function trechos(e) {
+  if (!e.trechos.length) return "";
+  const lista = e.trechos.slice().sort((a, b) => (a.preco ?? Infinity) - (b.preco ?? Infinity));
+  const itens = lista.slice(0, 40).map((t) => `<div class="trecho"><span>${esc(t.origem)} <span class="fraco">→</span> ${esc(t.destino)}</span>
+    <span class="p">${t.preco == null ? esc(t.texto) : brl(t.preco)}</span></div>`).join("");
+  const mais = lista.length > 40 ? `<div class="fraco nota">+${lista.length - 40} trechos — todos vão no Excel</div>` : "";
+  return `<h2>Trechos · ${e.resumo.origens} origem(ns)</h2><div class="cartao">${itens}${mais}</div>`;
 }
 
 // ---- historico --------------------------------------------------------------- #
-// Uma linha por oferta lida, para o Excel (CSV pt-BR: ";" e virgula decimal).
+// Uma linha por trecho lido, para o Excel (CSV pt-BR: ";" e virgula decimal).
+// Leituras da versao 0.1 (outro formato, sem trechos) ficam de fora.
 let historico = [];
 async function carregaHistorico() {
   const tudo = await chrome.storage.local.get(null);
-  historico = Object.entries(tudo).filter(([k]) => k.startsWith("afh:")).map(([k, v]) => Object.assign({ chave: k }, v))
-    .sort((a, b) => (a.quando < b.quando ? -1 : 1));
+  historico = Object.entries(tudo).filter(([k, v]) => k.startsWith("afh:") && v && v.trechos)
+    .map(([k, v]) => Object.assign({ chave: k }, v)).sort((a, b) => (a.quando < b.quando ? -1 : 1));
 }
 const num = (v) => (v == null ? "" : v.toFixed(2).replace(".", ","));
 const cel = (v) => { const s = v == null ? "" : String(v); return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-function csv(paginas) {
-  const cab = ["Data da leitura", "Hora", "Página", "Tipo de página", "Título da página", "Oferta", "Tipo", "Player", "Preço", "Publicada"];
+function csv(posts) {
+  const cab = ["Data da leitura", "Hora", "Post", "Página", "Tipo", "Origem", "Cód. origem", "Destino", "Cód. destino", "Preço",
+               "CVC no buscador", "Vendedores no buscador", "Botão abre"];
   const linhas = [];
-  for (const p of paginas) {
+  for (const p of posts) {
     const d = new Date(p.quando);
     const data = d.toLocaleDateString("pt-BR"), hora = d.toLocaleTimeString("pt-BR");
-    for (const o of p.ofertas) {
-      const quem = o.agencias.length ? o.agencias.map((a) => a.rotulo).join(", ") : "sem agência";
-      linhas.push([data, hora, p.url, p.tipo === "post" ? "post" : "lista", p.titulo, o.texto || o.titulo,
-                   TIPO[o.tipo] || o.tipo, quem, num(o.preco), o.quando || ""].map(cel).join(";"));
+    const v = p.vendedores;
+    const comum = [v.cvc ? "Sim" : "Não", v.lista.map((a) => a.rotulo).join(", "), v.primeiro ? v.primeiro.rotulo : ""];
+    for (const t of p.trechos) {
+      linhas.push([data, hora, p.titulo, p.url, p.tipo === "pacote" ? "Pacote" : "Passagem", t.origem, t.origem_cod,
+                   t.destino, t.destino_cod, num(t.preco), ...comum].map(cel).join(";"));
     }
   }
-  return "﻿" + [cab.join(";"), ...linhas].join("\r\n") + "\r\n";
+  return "\ufeff" + [cab.join(";"), ...linhas].join("\r\n") + "\r\n";
 }
 function exporta() {
   const blob = new Blob([csv(historico)], { type: "text/csv;charset=utf-8" });
@@ -102,30 +107,31 @@ async function limpa(b) {
   await chrome.storage.local.remove(historico.map((h) => h.chave));
 }
 function cartaoHistorico() {
-  const n = historico.length, of = historico.reduce((s, h) => s + h.ofertas.length, 0);
+  const n = historico.length, tr = historico.reduce((s, h) => s + h.trechos.length, 0);
   return `<h2>Histórico</h2><div class="cartao">
-    <div><b>${n}</b> página(s) lida(s) · ${of} oferta(s) <span class="fraco">— uma linha por página por dia</span></div>
+    <div><b>${n}</b> post(s) lido(s) · ${tr} trecho(s) <span class="fraco">— uma leitura por post por dia</span></div>
     <div class="botoes"><button id="h-exp" ${n ? "" : "disabled"}>Exportar para Excel</button>
       <button id="h-limpa" ${n ? "" : "disabled"}>Limpar histórico</button></div></div>`;
 }
 
 function diagnostico(e) {
-  const desc = (e.desconhecidos || []).slice(0, 10).map((d) => `<div><code>${esc(d.host)}</code> · ${d.n}</div>`).join("");
+  const desc = e.vendedores.desconhecidos.length
+    ? `<div class="suave" style="margin-top:6px">Vendedor fora do catálogo: ${e.vendedores.desconhecidos.map((c) => `<code>${esc(c)}</code>`).join(" ")}</div>` : "";
   return `<details data-k="diag"><summary>Diagnóstico</summary>
-    <div class="suave">Tipo de página: <b>${esc(e.tipo)}</b> · lida às ${esc(new Date(e.quando).toLocaleTimeString("pt-BR"))}</div>
-    ${desc ? `<div class="suave" style="margin-top:6px">Links externos não reconhecidos (não entram na conta):</div>${desc}` : ""}
+    <div class="suave">Dados da promoção no post: <b>${e.tem_promo ? "sim" : "não"}</b> · tabela de preços: <b>${e.tem_precos ? "sim" : "não"}</b>
+      · ${e.trechos.length} linha(s) lida(s) · às ${esc(new Date(e.quando).toLocaleTimeString("pt-BR"))}</div>${desc}
     <div class="botoes"><button id="d-baixar">Baixar página (HTML)</button></div>
-    <div class="fraco" style="font-size:11px;margin-top:4px">Para calibrar o leitor com a página real, se algo não for reconhecido.</div></details>`;
+    <div class="fraco nota">Para calibrar o leitor com a página real, se algo não for reconhecido.</div></details>`;
 }
 
 function desenha(e) {
-  if (!e) return;
+  if (!e || !e.vendedores) return;   // nada lido ainda (ou leitura da versao 0.1)
   const aberto = !!(app.querySelector("details[open]"));
+  const quando = new Date(e.quando);
   const cab = `<div class="pagina">${esc(e.titulo)}</div>
-    <div class="meta">${e.tipo === "post" ? "Post de promoção" : "Lista de promoções"} · ${esc(new URL(e.url).pathname)}</div>`;
-  const aviso = e.tipo === "post" && e.preco_resumo != null
-    ? `<div class="aviso">Resumo do post: a partir de <b>${brl(e.preco_resumo)}</b></div>` : "";
-  app.innerHTML = topo() + cab + aviso + kpis(e) + porPlayer(e) + comparativo(e) + ofertas(e) + cartaoHistorico() + diagnostico(e);
+    <div class="meta">Post de promoção · ${e.tipo === "pacote" ? "pacotes" : e.ida_e_volta === false ? "passagens só ida" : "passagens ida e volta"}
+      · lido ${esc(quando.toLocaleDateString("pt-BR"))} ${esc(quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))}</div>`;
+  app.innerHTML = topo() + cab + kpis(e) + buscador(e) + precos(e) + comparativo(e) + trechos(e) + cartaoHistorico() + diagnostico(e);
   if (aberto && app.querySelector("details")) app.querySelector("details").open = true;
   const b = (id) => document.getElementById(id);
   if (b("h-exp")) b("h-exp").onclick = exporta;

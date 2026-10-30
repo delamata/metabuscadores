@@ -44,21 +44,23 @@
   .kpi.cvc span { color: inherit; opacity: .8; }
   .marca { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; text-align: center; white-space: nowrap;
            background: var(--fundo); color: var(--suave); border: 1px solid var(--linha); }
-  .linha-barra { display: grid; grid-template-columns: 82px 1fr 52px; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
-  .linha-barra b { text-align: right; }
-  .barra { height: 8px; border-radius: 4px; background: var(--barra); overflow: hidden; }
+    .barra { height: 8px; border-radius: 4px; background: var(--barra); overflow: hidden; }
   .barra i { display: block; height: 100%; background: var(--outra); }
-  .comp { display: grid; grid-template-columns: 82px 1fr auto; align-items: center; gap: 8px; padding: 5px 0;
+  .comp { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 5px 0;
           border-top: 1px solid var(--linha); font-size: 12.5px; }
   .comp:first-of-type { border-top: 0; }
   .comp .valor { text-align: right; font-weight: 600; white-space: nowrap; }
   .tag { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
   .tag.bom { color: var(--bom); background: var(--bom-f); } .tag.ruim { color: var(--ruim); background: var(--ruim-f); }
-  .oferta { padding: 8px 0; border-top: 1px solid var(--linha); }
-  .oferta:first-of-type { border-top: 0; padding-top: 2px; }
-  .oferta .t { font-size: 12.5px; }
-  .oferta .rodape { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 11px; color: var(--suave); }
-  .oferta .p { font-weight: 700; color: var(--tinta); margin-left: auto; }
+  .kpi.sem-cvc { background: var(--ruim-f); color: var(--ruim); border-color: var(--ruim-f); }
+  .kpi.sem-cvc span { color: inherit; opacity: .85; }
+  .vend { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .vend .marca { min-width: 74px; }
+  .tag.abre { color: var(--suave); background: var(--fundo); border: 1px solid var(--linha); font-weight: 600; }
+  .trecho { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--linha); font-size: 12.5px; }
+  .trecho:first-of-type { border-top: 0; padding-top: 0; }
+  .trecho .p { font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .nota { font-size: 11px; margin-top: 6px; }
   .aviso { margin-top: 10px; padding: 8px 12px; border-radius: 10px; font-size: 12px; color: var(--alerta); background: var(--alerta-f); }
   .fraco { color: var(--fraco); } .suave { color: var(--suave); }
   button { font: inherit; margin-top: 8px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
@@ -81,9 +83,7 @@
 </style>
 </head>
 <body>
-<div id="app"><div class="vazio"><img src="icones/icone128.png" alt=""><p>Abra o Melhores Destinos para ler as promoções.</p></div></div>
-<script src="catalogo.js"></script>
-<script src="leitor.js"></script>
+<div id="app"><div class="vazio"><img src="icones/icone128.png" alt=""><p>Abra um post de promoção do Melhores Destinos<br>(melhoresdestinos.com.br/promocao/…) para ler os trechos e o buscador.</p></div></div>
 <script src="painel.js"></script>
 </body>
 </html>

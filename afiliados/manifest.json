@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Afiliados CVC",
-  "version": "0.1.0",
-  "description": "Le as promocoes do Melhores Destinos: quantas ofertas tem a CVC e cada concorrente (Player N) e o comparativo de preco. So le o que o site mostra.",
+  "version": "0.2.0",
+  "description": "Le os posts de promocao do Melhores Destinos: trechos e precos, e se a CVC esta no buscador do post (concorrentes como Player N). So le o que o site mostra.",
   "icons": {
     "16": "icones/icone16.png",
     "32": "icones/icone32.png",
@@ -19,7 +19,7 @@
   "side_panel": { "default_path": "painel.html" },
   "content_scripts": [
     {
-      "matches": ["https://www.melhoresdestinos.com.br/*", "https://melhoresdestinos.com.br/*"],
+      "matches": ["https://www.melhoresdestinos.com.br/promocao/*", "https://melhoresdestinos.com.br/promocao/*"],
       "js": ["catalogo.js", "leitor.js", "coletor.js"],
       "run_at": "document_idle"
     }

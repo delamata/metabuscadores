@@ -1,47 +1,52 @@
-# Afiliados CVC — promocoes do Melhores Destinos
+# Afiliados CVC — posts de promocao do Melhores Destinos
 
 Extensao Chrome **separada** do Metabuscadores (manifesto, icone, painel e
-historico proprios). Le as promocoes do **www.melhoresdestinos.com.br** que voce
-abre no seu Chrome e mostra, no painel lateral:
+historico proprios). Mede **so o post de promocao**
+(`www.melhoresdestinos.com.br/promocao/<slug>`) que voce abre no seu Chrome e
+mostra, no painel lateral:
 
-- **quantidade de ofertas** na pagina: total, com a CVC e de concorrentes;
-- **ofertas por player** (barras, CVC sempre na lista);
-- **comparativo de preco**: menor preco da CVC x menor preco de cada player,
-  `(CVC - player) / player` — a mesma conta do Metabuscadores (+ vermelho =
-  CVC mais cara);
-- a lista de ofertas, o **historico** (uma linha por pagina por dia) e
-  **Exportar para Excel** (uma linha por oferta, CSV pt-BR).
+- **trechos com preco** da promocao e o **menor preco** (confere com o
+  "a partir de" do titulo);
+- **CVC no buscador**: se a CVC esta entre os vendedores do buscador do post,
+  quais concorrentes estao (como Player N) e **qual deles o botao "Pesquisar"
+  abre** (prioridade fixa do site: Player 1 > Player 11 > CVC > Player 7 >
+  Player 10);
+- **preco por destino** (menor, maior, quantidade de trechos) e a mediana;
+- a lista de trechos (origem -> destino, do mais barato), o **historico** (uma
+  leitura por post por dia) e **Exportar para Excel** (uma linha por trecho).
 
 So **le o que o site ja mostrou**: nao faz requisicao nenhuma ao site.
 
+## De onde vem cada dado (calibrado com o HAR do post de 30/10/2026)
+
+| dado | onde esta no post |
+|---|---|
+| vendedores do buscador | `<script>` inline: `var promo = {..."search_engine_configuration":{"providers":["viajanet","latam","decolar","gol","cvc"]}}` |
+| quem o botao abre | regra do `motor-post-passagensaereas.js`: decolar > latam > cvc > viajanet > gol (padrao: decolar) |
+| trechos e precos | tabela que o site monta (`.ls-trechos-linha`, atributos `from`/`to`/`from_name`/`to_name`, preco em `.lt2`) a partir do `cheapest_prices_json` |
+
+**Limite: o post nao diz de qual vendedor e cada preco.** A tabela traz o
+menor preco de cada trecho, sem vendedor. Por isso o comparativo de preco
+CVC x Player **nao sai desta pagina** — o painel diz isso em vez de inventar.
+
+Se voce filtrar a tabela no site (origem/destino), a leitura nao muda: vale a
+promocao inteira.
+
 **So a CVC aparece com o nome real.** Os concorrentes sao "Player N", com o
-**mesmo numero do Metabuscadores** (Decolar = Player 1, Zupper = 2, MaxMilhas
-= 3, 123milhas = 4... — ver `catalogo.js`). Os textos do site (titulos,
-botoes) passam por uma mascara que troca o nome de cada agencia do catalogo
-pelo rotulo ("Ver na Decolar" -> "Ver na Player 1"). Agencia fora do
-catalogo (ex.: Hoteis.com) aparece como o site escreve. A coluna "Pagina" do
-Excel e a URL do proprio Melhores Destinos e pode citar a agencia no endereco.
-
-## Tipos de pagina
-
-| pagina | o que le | estado |
-|---|---|---|
-| **Lista** (home, listagens) | cada card de `/promocao/<slug>`: titulo (`h2` / `.titulo-loop`), preco "a partir de", tipo (passagem, pacote, hotel...), data (`.card-data-novo`) e a agencia/cia **citada no titulo** | calibrado com o HAR real da home (30/10/2026) |
-| **Post** (`/promocao/<slug>`) | os links de compra: agencia pelo dominio do link (inclusive dentro de redirect de afiliado, `?url=https%3A%2F%2Fwww.cvc.com.br...`) e o preco mais proximo do link; e o "Resumo da oferta: Preco: a partir de R$..." | **leitor generico, ainda nao calibrado** com um post real |
-
-Na home, o vendedor quase nunca esta no titulo do card (fica dentro do post):
-essas ofertas contam como "sem agencia identificada".
-
-Para calibrar com uma pagina real: **Diagnostico -> Baixar pagina (HTML)**.
-O Diagnostico tambem lista os links externos que o leitor nao reconheceu.
+**mesmo numero do Metabuscadores** (Decolar = Player 1, ViajaNet = 7, GOL =
+10, LATAM = 11... — ver `catalogo.js`). O titulo do post passa por uma
+mascara que troca o nome de cada agencia/cia pelo rotulo. Vendedor fora do
+catalogo aparece como "Player ?" (o codigo so no Diagnostico). A coluna
+"Pagina" do Excel e a URL do proprio Melhores Destinos e pode citar a cia no
+endereco.
 
 ## Pecas
 
 | arquivo | papel |
 |---|---|
 | `catalogo.js` | agencias, numero do Player, dominios, cores e a mascara de nomes |
-| `leitor.js` | le lista e post; preco, tipo, agencia do link; resumo e comparativo |
-| `coletor.js` | content script: le ao abrir e quando o site carrega mais cards; grava estado e historico |
+| `leitor.js` | le o post: dados da promocao, vendedores do buscador, trechos; resumo por destino/origem |
+| `coletor.js` | content script so em `/promocao/*`: le ao abrir e quando a tabela carrega; grava estado e historico |
 | `painel.html`/`painel.js` | painel lateral (tema claro e escuro) |
 | `servico.js` | abre o painel pelo icone; selo "AF" nas abas do Melhores Destinos |
 | `icones/` | identidade CVC com etiqueta de oferta (diferente do Metabuscadores) |

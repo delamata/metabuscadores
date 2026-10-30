@@ -1,14 +1,15 @@
-// Leitor do Melhores Destinos: transforma a pagina renderizada em ofertas.
+// Leitor do Melhores Destinos: so o POST DE PROMOCAO (/promocao/<slug>).
+// Calibrado com o HAR do post "Parques da Florida" de 30/10/2026.
 //
-// Dois tipos de pagina:
-//  - LISTA (home, /promocao, listagens): cada card e um link para
-//    /promocao/<slug> com o titulo num <h2> (ou .titulo-loop) e a data em
-//    .card-data-novo. Calibrado com o HAR da home de 30/10/2026. A agencia e a
-//    que o titulo cita ("Voos diretos da Latam...").
-//  - POST (/promocao/<slug>): os links de compra para as agencias, com o preco
-//    mais proximo de cada um. AINDA NAO CALIBRADO com um post real: le links
-//    externos cujo dominio esta no catalogo, inclusive dentro de redirect de
-//    afiliado (?url=https%3A%2F%2Fwww.cvc.com.br...).
+// O que o post traz (e o que o leitor usa):
+//  - <script> com `var promo = {...}` / `var publication_json = {...}`: a chave
+//    da promocao e os vendedores do buscador do post
+//    (search_engine_configuration.providers, ex. ["viajanet","latam","decolar","gol","cvc"]).
+//  - a tabela de trechos que o proprio site monta (listagem-passagens-trechos.js):
+//    <div class="ls-trechos-linha" from to from_name to_name> com o preco em .lt2.
+//    E o menor preco de cada trecho, SEM o nome do vendedor.
+//  - o botao "Pesquisar" do buscador abre UM vendedor, pela prioridade fixa do
+//    site (motor-post-passagensaereas.js): decolar > latam > cvc > viajanet > gol.
 //
 // So a CVC aparece com o nome real; as demais pelo rotulo "Player N".
 var LEITOR = (() => {
@@ -21,135 +22,108 @@ var LEITOR = (() => {
     return Number(m[1].replace(/\./g, "")) + (m[2] ? Number(m[2]) / 100 : 0);
   }
 
-  const TIPOS = [["pacote", /pacote/i], ["hotel", /hot[eé]is|hotel|hospedage|resort/i], ["cruzeiro", /cruzeiro/i],
-                 ["carro", /aluguel de carro|carros?\b/i], ["passagem", /voos?|passage|a[eé]rea|ida e volta/i]];
-  const tipoDe = (titulo) => (TIPOS.find(([, re]) => re.test(titulo || "")) || ["outro"])[0];
-
-  // Um link e as URLs que ele carrega: a propria e as de parametros que sao URL
-  // (redirect de afiliado), ate dois niveis.
-  function urlsDe(href, base) {
-    const out = [];
-    const visita = (s, nivel) => {
-      let u;
-      try { u = new URL(s, base || "https://www.melhoresdestinos.com.br/"); } catch (e) { return; }
-      out.push(u);
-      if (nivel >= 2) return;
-      for (const v of u.searchParams.values()) if (/^https?:\/\//i.test(v)) visita(v, nivel + 1);
-    };
-    visita(href, 0);
-    return out;
-  }
-
-  // Agencia de um link de compra: pelo dominio (dele ou do redirect).
-  function agenciaDoLink(href, base) {
-    for (const u of urlsDe(href, base)) {
-      const a = C.porHost(u.hostname);
-      if (a) return a;
-    }
-    return null;
-  }
-
   const limpa = (t) => String(t || "").replace(/\s+/g, " ").trim();
   const resumoAg = (a) => ({ id: a.id, rotulo: a.rotulo, cor: a.cor || null });
 
-  function tipoDePagina(url) {
-    let u; try { u = new URL(url); } catch (e) { return "outra"; }
-    return /^\/promocao\/[^/]+\/?$/.test(u.pathname) ? "post" : "lista";
+  function ehPromo(url) {
+    let u; try { u = new URL(url); } catch (e) { return false; }
+    return /^\/promocao\/[^/]+\/?$/.test(u.pathname);
   }
 
-  // ---- LISTA -------------------------------------------------------------- #
-  function lerLista(doc) {
-    const vistos = new Set(), ofertas = [];
-    for (const a of doc.querySelectorAll('a[href*="/promocao/"]')) {
-      const href = a.href || a.getAttribute("href");
-      if (!/\/promocao\/[^/?#]+/.test(href) || vistos.has(href)) continue;
-      const tEl = a.querySelector("h2, h3, .titulo-loop");
-      const titulo = limpa(tEl ? tEl.textContent : a.textContent);
-      if (!titulo) continue;
-      vistos.add(href);
-      const dEl = a.querySelector(".card-data-novo, .card-data");
-      // agencia e preco lidos do titulo original; o que fica guardado e o
-      // titulo mascarado (so a CVC com nome real)
-      ofertas.push({
-        titulo: C.mascara(titulo), href, preco: precoDe(titulo), tipo: tipoDe(titulo),
-        quando: dEl ? limpa(dEl.textContent) : null,
-        agencias: C.noTexto(titulo).map(resumoAg),
-        origem: "card",
-      });
-    }
-    return ofertas;
-  }
-
-  // ---- POST --------------------------------------------------------------- #
-  // Preco mais proximo de um link: o primeiro "R$" no menor bloco ao redor
-  // dele (subindo ate 4 niveis) que tenha um preco.
-  function precoPerto(el) {
-    let no = el;
-    for (let i = 0; i < 5 && no; i++, no = no.parentElement) {
-      const p = precoDe(no.textContent);
-      if (p != null) return p;
+  // `var promo = {...};` dos <script> inline. O conteudo e JSON numa linha so.
+  function dadosDaPromo(textos) {
+    for (const nome of ["promo", "publication_json"]) {
+      const re = new RegExp(`var\\s+${nome}\\s*=\\s*(\\{.*\\})\\s*;`);
+      for (const t of textos) {
+        const m = re.exec(t || "");
+        if (!m) continue;
+        try { return JSON.parse(m[1]); } catch (e) { /* tenta o proximo */ }
+      }
     }
     return null;
   }
 
-  // dominios que nunca sao venda (redes, anuncios, o proprio site e parceiros de conteudo)
-  const IGNORA = /(^|\.)(melhoresdestinos\.com\.br|melhorescartoes\.com\.br|melhores\.la|facebook\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|tiktok\.com|t\.me|whatsapp\.com|google\.[a-z.]+|doubleclick\.net|adjust\.com|apple\.com|metropoles\.com)$/i;
+  // Ordem em que o botao do buscador escolhe o vendedor (motor-post-passagensaereas.js)
+  const PRIORIDADE = ["decolar", "latam", "cvc", "viajanet", "gol"];
+  function abrePrimeiro(codigos) {
+    return PRIORIDADE.find((c) => codigos.includes(c)) || "decolar";   // padrao do site: decolar
+  }
+
+  // Vendedores do buscador do post, na ordem do site. Codigo fora do catalogo
+  // fica como "Player ?" (o codigo cru so aparece no Diagnostico).
+  function vendedores(promo) {
+    const codigos = ((promo && promo.search_engine_configuration && promo.search_engine_configuration.providers) || [])
+      .map((c) => String(c).toLowerCase());
+    const primeiro = codigos.length ? abrePrimeiro(codigos) : null;
+    const lista = codigos.map((codigo) => {
+      const a = C.noTexto(codigo)[0];
+      return Object.assign(a ? resumoAg(a) : { id: `?${codigo}`, rotulo: "Player ?", cor: null },
+                           { codigo, primeiro: codigo === primeiro });
+    });
+    return { lista, primeiro: lista.find((v) => v.primeiro) || null, cvc: lista.some((v) => v.id === "cvc"),
+             desconhecidos: lista.filter((v) => v.id.startsWith("?")).map((v) => v.codigo) };
+  }
+
+  // Tabela de trechos renderizada pelo site. Pacotes usam a mesma linha.
+  function lerTrechos(doc) {
+    return [...doc.querySelectorAll(".ls-trechos-linha")].map((l) => {
+      const cel = (k) => limpa((l.querySelector(k) || {}).textContent);
+      const txt = cel(".lt2");
+      return {
+        origem: l.getAttribute("from_name") || cel(".lt0"), origem_cod: l.getAttribute("from") || "",
+        destino: l.getAttribute("to_name") || cel(".lt1"), destino_cod: l.getAttribute("to") || "",
+        preco: precoDe(txt), texto: txt,
+      };
+    });
+  }
+
+  // A tabela tem filtros de origem/destino; filtrada, ela nao e a promocao inteira.
+  function filtrada(doc) {
+    const o = doc.getElementById("filtro-origem"), d = doc.getElementById("filtro-destino");
+    return !!((o && o.value && o.value !== "Todas") || (d && d.value && d.value !== "Todos"));
+  }
 
   function lerPost(doc, url) {
-    const raiz = doc.querySelector("article, .entry-content, .post-content, main") || doc.body;
-    const h1 = doc.querySelector("h1");
-    const titulo = limpa(h1 ? h1.textContent : doc.title);
-    const ofertas = [], desconhecidos = new Map(), vistos = new Set();
-    for (const a of raiz.querySelectorAll("a[href]")) {
-      const href = a.href || a.getAttribute("href");
-      const urls = urlsDe(href, url);
-      const externos = urls.filter((u) => !IGNORA.test(u.hostname));
-      if (!externos.length) continue;
-      const ag = agenciaDoLink(href, url);
-      if (!ag) {
-        for (const u of externos) desconhecidos.set(u.hostname, (desconhecidos.get(u.hostname) || 0) + 1);
-        continue;
-      }
-      const preco = precoPerto(a);
-      const chave = `${ag.id}|${preco}|${href}`;
-      if (vistos.has(chave)) continue;
-      vistos.add(chave);
-      ofertas.push({ titulo: C.mascara(titulo), texto: C.mascara(limpa(a.textContent).slice(0, 120)), href, preco,
-                     tipo: tipoDe(titulo), agencias: [resumoAg(ag)], origem: "link" });
-    }
-    // "Resumo da oferta: ✅ Preço: a partir de R$ 1.088" (pacotes)
-    const resumo = /Pre[cç]o:\s*a partir de\s*(R\$\s*[\d.,]+)/i.exec(raiz.textContent || "");
-    return { titulo: C.mascara(titulo), ofertas, preco_resumo: resumo ? precoDe(resumo[1]) : null,
-             desconhecidos: [...desconhecidos].map(([host, n]) => ({ host, n })).sort((x, y) => y.n - x.n) };
+    const h1 = doc.querySelector("h1.h1post, h1");
+    const tituloOriginal = limpa(h1 ? h1.textContent : doc.title);
+    const promo = dadosDaPromo([...doc.querySelectorAll("script:not([src])")].map((s) => s.textContent));
+    return {
+      url, titulo: C.mascara(tituloOriginal), preco_titulo: precoDe(tituloOriginal),
+      tem_promo: !!promo, tem_precos: !!(promo && promo.has_prices), ativa: promo ? promo.active !== false : null,
+      tipo: promo && promo.publication_type === "packages" ? "pacote" : "passagem",
+      ida_e_volta: promo ? /Roundtrip/i.test(promo.itinerary_price_type || "") : null,
+      vendedores: vendedores(promo), trechos: lerTrechos(doc), filtrada: filtrada(doc),
+    };
   }
 
-  // ---- resumo da pagina --------------------------------------------------- #
-  // Quantas ofertas cada um tem e o menor preco; comparativo da CVC com cada
-  // player: (CVC - player) / player, a mesma conta do Metabuscadores.
-  function resumo(ofertas) {
-    const por = new Map();
-    let semAgencia = 0;
-    for (const o of ofertas) {
-      if (!o.agencias.length) { semAgencia += 1; continue; }
-      for (const a of o.agencias) {
-        const d = por.get(a.id) || Object.assign({ ofertas: 0, menor: null }, a);
-        d.ofertas += 1;
-        if (o.preco != null && (d.menor == null || o.preco < d.menor)) d.menor = o.preco;
-        por.set(a.id, d);
+  // Menor/maior por grupo (destino ou origem), do mais barato para o mais caro
+  function porGrupo(trechos, campo) {
+    const m = new Map();
+    for (const t of trechos) {
+      const g = m.get(t[campo]) || { nome: t[campo], n: 0, menor: null, maior: null };
+      g.n += 1;
+      if (t.preco != null) {
+        if (g.menor == null || t.preco < g.menor) g.menor = t.preco;
+        if (g.maior == null || t.preco > g.maior) g.maior = t.preco;
       }
+      m.set(t[campo], g);
     }
-    const lista = [...por.values()].sort((x, y) => (y.ofertas - x.ofertas) || ((x.menor ?? Infinity) - (y.menor ?? Infinity)));
-    const cvc = por.get("cvc") || null;
-    const comparativo = lista.filter((d) => d.id !== "cvc").map((d) => ({
-      id: d.id, rotulo: d.rotulo, cor: d.cor, menor: d.menor,
-      dif: cvc && cvc.menor != null && d.menor ? (cvc.menor - d.menor) / d.menor * 100 : null,
-    }));
-    return { total: ofertas.length, semAgencia, cvc_ofertas: cvc ? cvc.ofertas : 0, cvc_menor: cvc ? cvc.menor : null,
-             concorrentes_ofertas: lista.filter((d) => d.id !== "cvc").reduce((s, d) => s + d.ofertas, 0),
-             por_agencia: lista, comparativo };
+    return [...m.values()].sort((a, b) => (a.menor ?? Infinity) - (b.menor ?? Infinity));
   }
 
-  return { precoDe, tipoDe, urlsDe, agenciaDoLink, tipoDePagina, lerLista, lerPost, resumo };
+  function resumo(post) {
+    const precos = post.trechos.map((t) => t.preco).filter((p) => p != null).sort((a, b) => a - b);
+    const meio = precos.length >> 1;
+    return {
+      trechos: post.trechos.length, com_preco: precos.length,
+      menor: precos.length ? precos[0] : null, maior: precos.length ? precos[precos.length - 1] : null,
+      mediana: precos.length ? (precos.length % 2 ? precos[meio] : (precos[meio - 1] + precos[meio]) / 2) : null,
+      origens: new Set(post.trechos.map((t) => t.origem)).size,
+      por_destino: porGrupo(post.trechos, "destino"), por_origem: porGrupo(post.trechos, "origem"),
+    };
+  }
+
+  return { precoDe, ehPromo, dadosDaPromo, abrePrimeiro, vendedores, lerTrechos, filtrada, lerPost, resumo };
 })();
 
 if (typeof module !== "undefined") module.exports = LEITOR;   // para os testes

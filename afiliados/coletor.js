@@ -1,27 +1,21 @@
-// Content script (mundo ISOLATED) no Melhores Destinos: le a pagina, publica a
-// leitura para o painel em chrome.storage.local ("af_estado") e grava uma linha
+// Content script (mundo ISOLATED) nos posts de promocao do Melhores Destinos:
+// le o post, publica a leitura para o painel em chrome.storage.local ("af_estado") e grava uma linha
 // por pagina lida no historico ("afh:..."). Nao faz nenhuma requisicao: so le
 // o que o site ja mostrou.
 (() => {
   if (window.top !== window || window.__afiliadosCVC) return;
   window.__afiliadosCVC = true;
 
-  function le() {
-    const tipo = LEITOR.tipoDePagina(location.href);
-    if (tipo === "post") {
-      const p = LEITOR.lerPost(document, location.href);
-      return { tipo, url: location.href, titulo: p.titulo, ofertas: p.ofertas,
-               preco_resumo: p.preco_resumo, desconhecidos: p.desconhecidos };
-    }
-    return { tipo, url: location.href, titulo: CATALOGO.mascara(document.title), ofertas: LEITOR.lerLista(document), desconhecidos: [] };
-  }
-
+  // So o post de promocao. Com a tabela filtrada (origem/destino escolhidos
+  // pelo usuario) a leitura nao e a promocao inteira: fica a anterior.
   let ultima = "";
   function publica() {
-    const l = le();
-    l.resumo = LEITOR.resumo(l.ofertas);
+    if (!LEITOR.ehPromo(location.href)) return;
+    const l = LEITOR.lerPost(document, location.href);
+    if (l.filtrada) return;
+    l.resumo = LEITOR.resumo(l);
     l.quando = new Date().toISOString();
-    const assinatura = JSON.stringify([l.url, l.ofertas.length, l.resumo.cvc_ofertas]);
+    const assinatura = JSON.stringify([l.url, l.trechos.length, l.resumo.menor, l.vendedores.lista.map((v) => v.codigo)]);
     if (assinatura === ultima) return;   // nada mudou
     ultima = assinatura;
     try {
@@ -30,13 +24,13 @@
     } catch (e) { /* extensao recarregada por baixo da aba */ }
   }
 
-  // uma linha por pagina por dia: a leitura mais recente substitui a anterior
+  // uma linha por post por dia: a leitura mais recente substitui a anterior
   function gravaHistorico(l) {
-    if (!l.ofertas.length) return;
+    if (!l.trechos.length && !l.vendedores.lista.length) return;
     const dia = l.quando.slice(0, 10);
     const chave = `afh:${dia}:${l.url.replace(/[?#].*$/, "")}`;
-    chrome.storage.local.set({ [chave]: { quando: l.quando, url: l.url, tipo: l.tipo, titulo: l.titulo,
-      ofertas: l.ofertas, resumo: l.resumo } }).catch(() => {});
+    chrome.storage.local.set({ [chave]: { quando: l.quando, url: l.url, titulo: l.titulo, tipo: l.tipo,
+      vendedores: l.vendedores, trechos: l.trechos, resumo: l.resumo } }).catch(() => {});
   }
 
   // Pedido do painel: baixa o HTML da pagina como esta agora, para calibrar o
@@ -54,7 +48,7 @@
   });
 
   publica();
-  // cards carregados depois (rolagem infinita, "carregar mais"): rele com calma
+  // a tabela de trechos chega depois (o site busca os precos): rele com calma
   let t = null;
   new MutationObserver(() => { clearTimeout(t); t = setTimeout(publica, 1500); })
     .observe(document.body, { childList: true, subtree: true });
