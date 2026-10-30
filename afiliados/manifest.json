@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Afiliados CVC",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Le os posts de promocao do Melhores Destinos e a pagina ver datas de cada trecho: precos, posicao e comparativo da CVC com os concorrentes (Player N). So le o que o site mostra.",
   "icons": {
     "16": "icones/icone16.png",

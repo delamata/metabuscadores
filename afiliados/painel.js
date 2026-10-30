@@ -16,8 +16,8 @@ const ord = (n) => `${n}º`;
 function kpis(e) {
   const r = e.resumo, v = e.vendedores;
   const cvc = v.cvc
-    ? `<div class="kpi cvc"><b>${ord(v.cvc_posicao)} de ${v.lista.length}</b><span>posição da CVC no buscador</span></div>`
-    : `<div class="kpi sem-cvc"><b>Fora</b><span>CVC não está no buscador</span></div>`;
+    ? `<button class="kpi cvc clicavel ${detalheAberto ? "ativo" : ""}" data-detalhe><b>${ord(v.cvc_posicao)} de ${v.lista.length}</b><span>posição da CVC no buscador · ver detalhe</span></button>`
+    : `<button class="kpi sem-cvc clicavel ${detalheAberto ? "ativo" : ""}" data-detalhe><b>Fora</b><span>CVC não está no buscador · ver detalhe</span></button>`;
   return `<div class="kpis">
     <div class="kpi"><b>${r.trechos}</b><span>trechos com preço</span></div>
     <div class="kpi"><b>${brl(r.menor)}</b><span>menor preço do post</span></div>
@@ -26,14 +26,25 @@ function kpis(e) {
 }
 
 // A CVC no post: posicao na lista, vez no botao e o preco medido nos "ver datas"
+// CVC citada no texto do post? Em que posicao entre as agencias/cias citadas.
+function citadaNoTexto(e) {
+  const c = e.citacoes || [], cvc = c.find((x) => x.id === "cvc");
+  return cvc ? `<button class="link-pos" data-detalhe>${ord(cvc.posicao)} de ${c.length}</button> <span class="fraco">(${cvc.vezes}×)</span>`
+    : `<span class="fraco">não citada${c.length ? ` · ${c.length} outra(s) citada(s)` : ""}</span>`;
+}
+
 function cartaoCvc(e) {
   const v = e.vendedores;
-  if (!v.cvc) return "";
+  if (!v.cvc) {
+    return `<h2>CVC neste post</h2><div class="cartao"><div class="comp"><span class="suave">no buscador</span><span></span><span class="valor fraco">não está</span></div>
+      <div class="comp"><span class="suave">citada no texto do post</span><span></span><span class="valor">${citadaNoTexto(e)}</span></div>${trechosMedidos(e)}</div>`;
+  }
   const vez = v.cvc_vez_botao == null ? "—"
     : v.cvc_vez_botao === 1 ? "1º — o botão abre a CVC"
     : `${ord(v.cvc_vez_botao)} — só abre a CVC se ${v.antes_da_cvc.join(" e ")} não estiverem no post`;
   return `<h2>CVC neste post</h2><div class="cartao cvc-borda">
-    <div class="comp"><span class="suave">posição na lista do buscador</span><span></span><span class="valor">${ord(v.cvc_posicao)} de ${v.lista.length}</span></div>
+    <div class="comp"><span class="suave">posição na lista do buscador</span><span></span><span class="valor"><button class="link-pos" data-detalhe>${ord(v.cvc_posicao)} de ${v.lista.length}</button></span></div>
+    <div class="comp"><span class="suave">citada no texto do post</span><span></span><span class="valor">${citadaNoTexto(e)}</span></div>
     <div class="comp"><span class="suave">vez no botão “Pesquisar”</span><span></span><span class="valor quebra">${esc(vez)}</span></div>
     ${trechosMedidos(e)}</div>`;
 }
@@ -44,7 +55,7 @@ function buscador(e) {
   if (!v.lista.length) {
     return `<h2>Buscador do post</h2><div class="cartao"><div class="fraco">Este post não traz a lista de vendedores do buscador.</div></div>`;
   }
-  const chips = v.lista.map((a) => `<div class="vend"><span class="pos">${a.posicao}º</span>${marca(a)}${a.primeiro ? '<span class="tag abre">o botão abre este</span>' : ""}</div>`).join("");
+  const chips = v.lista.map((a) => `<div class="vend"><span class="pos">${a.posicao}º</span>${a.id === "cvc" ? `<button class="sem-borda" data-detalhe>${marca(a)}</button>` : marca(a)}${a.primeiro ? '<span class="tag abre">o botão abre este</span>' : ""}</div>`).join("");
   const semCvc = v.cvc ? "" : `<div class="aviso">A CVC não está entre os vendedores deste post.</div>`;
   return `<h2>Buscador do post · ${v.lista.length} vendedor(es)</h2><div class="cartao">${chips}${semCvc}</div>`;
 }
@@ -105,12 +116,15 @@ const tabela = (cab, linhas) => [cab.join(";"), ...linhas.map((l) => l.map(cel).
 // Excel 1: uma linha por trecho do post
 function csvPosts(posts) {
   const cab = ["Data da leitura", "Hora", "Post", "Página", "Tipo", "Origem", "Cód. origem", "Destino", "Cód. destino", "Preço",
-               "CVC no buscador", "Posição CVC no buscador", "Vez CVC no botão", "Vendedores no buscador", "Botão abre"];
+               "CVC no buscador", "Posição CVC no buscador", "Vez CVC no botão", "Vendedores no buscador", "Botão abre",
+               "CVC citada no texto", "Posição CVC no texto"];
   const linhas = [];
   for (const p of posts) {
     const v = p.vendedores;
     const comum = [v.cvc ? "Sim" : "Não", v.cvc ? `${v.cvc_posicao} de ${v.lista.length}` : "", v.cvc_vez_botao || "",
                    v.lista.map((a) => a.rotulo).join(", "), v.primeiro ? v.primeiro.rotulo : ""];
+    const cit = (p.citacoes || []).find((x) => x.id === "cvc");
+    comum.push(cit ? "Sim" : "Não", cit ? `${cit.posicao} de ${p.citacoes.length}` : "");
     for (const t of p.trechos) {
       linhas.push([...dataHora(p.quando), p.titulo, p.url, p.tipo === "pacote" ? "Pacote" : "Passagem", t.origem, t.origem_cod,
                    t.destino, t.destino_cod, num(t.preco), ...comum]);
@@ -175,8 +189,8 @@ const nomeMes = (m) => { const [a, n] = m.split("-"); return `${["Jan", "Fev", "
 function kpisVoos(e) {
   const r = e.resumo;
   const cvc = r.cvc_lugar_preco
-    ? `<div class="kpi cvc"><b>${brl(r.cvc_menor)}</b><span>preço CVC · ${ord(r.cvc_lugar_preco)} de ${r.vendedores} em preço</span></div>`
-    : `<div class="kpi sem-cvc"><b>Sem CVC</b><span>nenhuma data da CVC</span></div>`;
+    ? `<button class="kpi cvc clicavel ${detalheAberto ? "ativo" : ""}" data-detalhe><b>${brl(r.cvc_menor)}</b><span>preço CVC · ${ord(r.cvc_lugar_preco)} de ${r.vendedores} em preço · ver detalhe</span></button>`
+    : `<button class="kpi sem-cvc clicavel ${detalheAberto ? "ativo" : ""}" data-detalhe><b>Sem CVC</b><span>nenhuma data da CVC · ver detalhe</span></button>`;
   return `<div class="kpis">
     <div class="kpi"><b>${r.datas}</b><span>datas com preço</span></div>
     <div class="kpi"><b>${brl(r.menor)}</b><span>menor do trecho</span></div>
@@ -257,6 +271,47 @@ function trechosMedidos(e) {
     <div class="fraco nota">% contra o player mais barato do trecho.</div>`;
 }
 
+// ---- detalhe da posicao (abre ao clicar na posicao da CVC) ------------------ #
+// Ofertas, concorrentes e cobertura, das leituras de "ver datas": no post, de
+// todos os trechos dele ja abertos; no "ver datas", do proprio trecho.
+let detalheAberto = false;
+function ultimosDoPost(urlPost) {
+  const m = new Map();
+  for (const h of historicoVoos) if (h.post_url === urlPost) m.set(`${h.de}-${h.para}`, h);
+  return [...m.values()];
+}
+function detalhe(e) {
+  if (!detalheAberto) return "";
+  const noVoos = e.pagina === "voos";
+  const lidos = noVoos ? [e] : ultimosDoPost(e.url.replace(/[?#].*$/, ""));
+  const c = LEITOR.cobertura(lidos);
+  // concorrentes: os das datas + os do buscador e do texto que nao tiveram data
+  const vistos = new Set(c.lista.map((g) => g.id));
+  const extras = [];
+  const soma = (a, onde) => { if (a.id === "cvc" || a.id.startsWith("?") || vistos.has(a.id)) return; vistos.add(a.id); extras.push(Object.assign({}, a, { onde })); };
+  e.vendedores.lista.forEach((a) => soma(a, "no buscador"));
+  (e.citacoes || []).forEach((a) => soma(a, "citado no texto"));
+  const cvcLinha = c.cvc || { id: "cvc", rotulo: "CVC", cor: "cvc", ofertas: 0, trechos: 0, cobertura: c.ofertas ? 0 : null, cobertura_trechos: c.trechos ? 0 : null, menor: null };
+  const linha = (g) => `<tr class="${g.id === "cvc" ? "eh-cvc" : ""}"><td>${marca(g)}</td><td>${g.ofertas}</td>
+    <td>${g.cobertura == null ? "—" : pct(g.cobertura)}</td><td>${g.cobertura_trechos == null ? "—" : `${g.trechos}/${c.trechos}`}</td><td>${brl(g.menor)}</td></tr>`;
+  const semDatas = !c.trechos ? `<div class="aviso">Nenhum “ver datas” aberto para este post ainda: abra um trecho para ver ofertas e cobertura por vendedor.</div>` : "";
+  const fonte = noVoos ? `${c.ofertas} oferta(s) (datas) neste trecho`
+    : `${e.resumo.trechos} trecho(s) no post · ${c.trechos} aberto(s) em “ver datas” · ${c.ofertas} oferta(s) com vendedor`;
+  return `<h2>Detalhe da posição da CVC</h2><div class="cartao cvc-borda detalhe">
+    <div class="kpis kpis-2">
+      <div class="kpi"><b>${c.ofertas}</b><span>ofertas com vendedor</span></div>
+      <div class="kpi"><b>${c.cvc ? c.cvc.ofertas : 0}</b><span>ofertas da CVC</span></div>
+      <div class="kpi"><b>${c.cvc ? pct(c.cvc.cobertura) : c.ofertas ? "0%" : "—"}</b><span>cobertura da CVC</span></div>
+      <div class="kpi"><b>${c.concorrentes.length + extras.length}</b><span>concorrentes</span></div>
+    </div>
+    <div class="fraco nota">${esc(fonte)}</div>${semDatas}
+    <table class="tab"><thead><tr><th>Vendedor</th><th>Ofertas</th><th>Cobertura</th><th>Trechos</th><th>Menor</th></tr></thead>
+      <tbody>${linha(cvcLinha)}${c.concorrentes.map(linha).join("")}
+      ${extras.map((g) => `<tr><td>${marca(g)}</td><td colspan="4" class="fraco">${esc(g.onde)} · sem oferta nas datas lidas</td></tr>`).join("")}</tbody></table>
+    <div class="fraco nota">Cobertura = % das ofertas (datas) em que o vendedor aparece · Trechos = em quantos trechos abertos ele tem ao menos uma data.</div>
+    <button class="fechar" data-detalhe>Fechar detalhe</button></div>`;
+}
+
 function desenhaVoos(e) {
   const quando = new Date(e.quando);
   const post = tituloPost(e);
@@ -264,7 +319,7 @@ function desenhaVoos(e) {
     <div class="meta">Ver datas · ${e.ida_e_volta ? "ida e volta" : "só ida"} · lido ${esc(quando.toLocaleDateString("pt-BR"))}
       ${esc(quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))}</div>
     ${post ? `<div class="meta">Post: ${esc(post)}</div>` : ""}`
-    + kpisVoos(e) + cartaoCvcVoos(e) + comparativoVoos(e) + porVendedor(e) + mesesVoos(e) + datasVoos(e) + cartaoHistorico() + diagnosticoVoos(e);
+    + kpisVoos(e) + detalhe(e) + cartaoCvcVoos(e) + comparativoVoos(e) + porVendedor(e) + mesesVoos(e) + datasVoos(e) + cartaoHistorico() + diagnosticoVoos(e);
 }
 
 function desenha(e) {
@@ -277,9 +332,10 @@ function desenha(e) {
     const cab = `<div class="pagina">${esc(e.titulo)}</div>
       <div class="meta">Post de promoção · ${e.tipo === "pacote" ? "pacotes" : e.ida_e_volta === false ? "passagens só ida" : "passagens ida e volta"}
         · lido ${esc(quando.toLocaleDateString("pt-BR"))} ${esc(quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))}</div>`;
-    app.innerHTML = topo() + cab + kpis(e) + cartaoCvc(e) + buscador(e) + precos(e) + trechos(e) + cartaoHistorico() + diagnostico(e);
+    app.innerHTML = topo() + cab + kpis(e) + detalhe(e) + cartaoCvc(e) + buscador(e) + precos(e) + trechos(e) + cartaoHistorico() + diagnostico(e);
   }
   if (aberto && app.querySelector("details")) app.querySelector("details").open = true;
+  app.querySelectorAll("[data-detalhe]").forEach((el) => { el.onclick = () => { detalheAberto = !detalheAberto; desenha(ultimo); }; });
   const b = (id) => document.getElementById(id);
   if (b("h-exp")) b("h-exp").onclick = () => arquivo(csvPosts(historico), `afiliados-posts-${hoje()}.csv`);
   if (b("h-expv")) b("h-expv").onclick = () => arquivo(csvVoos(historicoVoos), `afiliados-precos-por-vendedor-${hoje()}.csv`);

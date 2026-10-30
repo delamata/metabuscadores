@@ -92,6 +92,29 @@ var LEITOR = (() => {
     return !!((o && o.value && o.value !== "Todas") || (d && d.value && d.value !== "Todos"));
   }
 
+  // Agencias/cias do catalogo citadas no texto do post (titulo + corpo), na
+  // ordem da primeira citacao: posicao 1 = a primeira citada.
+  // Azul e GOL tambem sao palavras comuns ("mar azul", "gol"): no texto so
+  // contam com a grafia da marca.
+  const NO_TEXTO = { p9: /\bAzul\b(?!\s+(?:turquesa|celeste|claro|escuro))/g, p10: /\b(?:GOL|Gol)\b/g };
+  function citacoes(texto) {
+    const t = String(texto || "");
+    return C.TODAS.map((a) => {
+      const re = NO_TEXTO[a.id] || new RegExp(a.re.source, "gi");
+      const achados = [...t.matchAll(re)];
+      return achados.length ? Object.assign(resumoAg(a), { vezes: achados.length, inicio: achados[0].index }) : null;
+    }).filter(Boolean).sort((x, y) => x.inicio - y.inicio).map((c, i) => Object.assign(c, { posicao: i + 1 }));
+  }
+
+  // Texto que o leitor ve: sem <script>/<style> (o post tem a configuracao do
+  // buscador num <script> dentro do artigo, com o nome dos vendedores).
+  function textoVisivel(el) {
+    if (!el) return "";
+    const c = el.cloneNode(true);
+    c.querySelectorAll("script, style, noscript, template").forEach((n) => n.remove());
+    return limpa(c.textContent);
+  }
+
   function lerPost(doc, url) {
     const h1 = doc.querySelector("h1.h1post, h1");
     const tituloOriginal = limpa(h1 ? h1.textContent : doc.title);
@@ -102,6 +125,7 @@ var LEITOR = (() => {
       tipo: promo && promo.publication_type === "packages" ? "pacote" : "passagem",
       ida_e_volta: promo ? /Roundtrip/i.test(promo.itinerary_price_type || "") : null,
       vendedores: vendedores(promo), trechos: lerTrechos(doc), filtrada: filtrada(doc),
+      citacoes: citacoes(tituloOriginal + " " + textoVisivel(doc.querySelector(".conteudo-post, article, .entry-content"))),
     };
   }
 
@@ -212,8 +236,33 @@ var LEITOR = (() => {
     };
   }
 
+  // Ofertas, concorrentes e cobertura a partir das leituras de "ver datas"
+  // (uma por trecho). Cobertura = em quantas datas o vendedor e o que aparece,
+  // e em quantos trechos ele tem ao menos uma data — a mesma ideia do
+  // Metabuscadores (% dos voos em que a agencia aparece).
+  function cobertura(lidos) {
+    const por = new Map();
+    let datas = 0;
+    for (const l of lidos) {
+      const noTrecho = new Set();
+      for (const d of l.datas) {
+        datas += 1;
+        const g = por.get(d.vendedor.id) || Object.assign({ ofertas: 0, trechos: 0, menor: null }, d.vendedor);
+        g.ofertas += 1;
+        if (d.preco != null && (g.menor == null || d.preco < g.menor)) g.menor = d.preco;
+        if (!noTrecho.has(d.vendedor.id)) { noTrecho.add(d.vendedor.id); g.trechos += 1; }
+        por.set(d.vendedor.id, g);
+      }
+    }
+    const lista = [...por.values()].map((g) => Object.assign(g, {
+      cobertura: datas ? g.ofertas / datas * 100 : null, cobertura_trechos: lidos.length ? g.trechos / lidos.length * 100 : null,
+    })).sort((a, b) => (b.ofertas - a.ofertas) || ((a.menor ?? Infinity) - (b.menor ?? Infinity)));
+    const cvc = por.get("cvc") || null;
+    return { trechos: lidos.length, ofertas: datas, cvc, concorrentes: lista.filter((g) => g.id !== "cvc"), lista };
+  }
+
   return { precoDe, ehPromo, dadosDaPromo, abrePrimeiro, vendedores, lerTrechos, filtrada, lerPost, resumo,
-           ehVoos, vendedorDe, lerVoos, juntaVoos, resumoVoos };
+           ehVoos, vendedorDe, lerVoos, juntaVoos, resumoVoos, citacoes, cobertura };
 })();
 
 if (typeof module !== "undefined") module.exports = LEITOR;   // para os testes

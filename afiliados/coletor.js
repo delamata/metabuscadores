@@ -30,7 +30,7 @@
     const dia = l.quando.slice(0, 10);
     const chave = `afh:${dia}:${l.url.replace(/[?#].*$/, "")}`;
     chrome.storage.local.set({ [chave]: { quando: l.quando, url: l.url, titulo: l.titulo, tipo: l.tipo,
-      vendedores: l.vendedores, trechos: l.trechos, resumo: l.resumo } }).catch(() => {});
+      vendedores: l.vendedores, citacoes: l.citacoes, trechos: l.trechos, resumo: l.resumo } }).catch(() => {});
   }
 
   // ---- pagina "ver datas" (/voos?rota=...) ---------------------------------- #

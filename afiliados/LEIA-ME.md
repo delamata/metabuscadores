@@ -44,6 +44,15 @@ trecho ja aberto. Excel: **"Excel dos posts"** (uma linha por trecho do post)
 e **"Excel dos precos por vendedor"** (uma linha por data, com vendedor,
 posicao, cia e bagagem).
 
+**Posicao da CVC (clicavel).** O painel diz se a CVC foi **citada** e em
+qual posicao: na lista do buscador do post (ex.: 5o de 5) e no texto do post
+(ordem da primeira citacao entre as agencias/cias do catalogo; o texto lido
+e o visivel, sem os `<script>`). Clicando na posicao abre o **detalhe**:
+quantidade de ofertas (datas com vendedor), ofertas da CVC, os concorrentes
+e a **cobertura** de cada um (% das ofertas em que aparece e em quantos
+trechos abertos tem ao menos uma data). No post, o detalhe soma todos os
+"ver datas" ja abertos dele; no "ver datas", vale o trecho.
+
 Se voce filtrar a tabela no site (origem/destino), a leitura nao muda: vale a
 promocao inteira.
 

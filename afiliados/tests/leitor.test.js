@@ -128,3 +128,24 @@ test("ver datas: cada mes clicado soma; o mesmo mes substitui", () => {
   assert.equal(L.juntaVoos(junto, fev).datas.length, 6);
   assert.equal(L.juntaVoos(junto, L.lerVoos(JSON_VOOS, URL_VOOS.replace("BHZ", "SAO"))).datas.length, 5);   // outra pagina
 });
+
+test("citacoes no texto do post: ordem da primeira citacao", () => {
+  const c = L.citacoes("Voos pela Latam e Gol. Compre na CVC ou na Decolar; a CVC parcela.");
+  assert.deepEqual(c.map((x) => [x.rotulo, x.posicao, x.vezes]), [["Player 11", 1, 1], ["Player 10", 2, 1], ["CVC", 3, 2], ["Player 1", 4, 1]]);
+  assert.deepEqual(L.citacoes("Parques da Flórida! Voos a partir de R$ 2.341"), []);
+  assert.deepEqual(L.citacoes("mar azul e um gol de placa"), []);
+  assert.deepEqual(L.citacoes("Voos da Azul e da GOL").map((x) => x.rotulo), ["Player 9", "Player 10"]);
+});
+
+test("cobertura: ofertas e trechos de cada vendedor", () => {
+  const v = (id, rotulo) => ({ id, rotulo, cor: null });
+  const lidos = [
+    { datas: [{ preco: 10, vendedor: v("cvc", "CVC") }, { preco: 9, vendedor: v("p1", "Player 1") }, { preco: 12, vendedor: v("p1", "Player 1") }] },
+    { datas: [{ preco: 20, vendedor: v("p1", "Player 1") }] },
+  ];
+  const r = L.cobertura(lidos);
+  assert.equal(r.trechos, 2); assert.equal(r.ofertas, 4);
+  assert.equal(r.cvc.ofertas, 1); assert.equal(r.cvc.cobertura, 25); assert.equal(r.cvc.cobertura_trechos, 50); assert.equal(r.cvc.menor, 10);
+  assert.deepEqual(r.concorrentes.map((g) => [g.rotulo, g.ofertas, g.cobertura, g.cobertura_trechos, g.menor]), [["Player 1", 3, 75, 100, 9]]);
+  assert.equal(L.cobertura([]).cvc, null);
+});
