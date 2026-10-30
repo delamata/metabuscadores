@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Afiliados CVC: identidade da CVC (amarelo + azul-marinho), simbolo
+       proprio (etiqueta de oferta com %) para nao confundir com o
+       Metabuscadores. Desenho proprio, sem o logotipo da marca. -->
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe600"/>
+      <stop offset="1" stop-color="#ffd200"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#fundo)"/>
+  <!-- etiqueta de preco inclinada -->
+  <g transform="rotate(-45 64 64)">
+    <path d="M30 44 h52 l22 20 l-22 20 h-52 a8 8 0 0 1 -8 -8 v-24 a8 8 0 0 1 8 -8 z" fill="#0b2a6f"/>
+    <circle cx="88" cy="64" r="6" fill="#ffe600"/>
+  </g>
+  <!-- % dentro da etiqueta -->
+  <g transform="rotate(-45 64 64)" fill="#ffffff">
+    <circle cx="42" cy="56" r="6"/>
+    <circle cx="62" cy="72" r="6"/>
+    <rect x="49" y="44" width="5" height="40" rx="2.5" transform="rotate(35 51.5 64)"/>
+  </g>
+  <!-- selo: link de afiliado (some no 16px) -->
+  <g id="selo">
+    <circle cx="100" cy="100" r="17" fill="#0b2a6f" stroke="#ffe600" stroke-width="4"/>
+    <g fill="none" stroke="#ffe600" stroke-width="4" stroke-linecap="round">
+      <path d="M95 104 l-3 3 a5 5 0 0 1 -7 -7 l5 -5 a5 5 0 0 1 7 0"/>
+      <path d="M105 96 l3 -3 a5 5 0 0 1 7 7 l-5 5 a5 5 0 0 1 -7 0"/>
+      <path d="M96 104 l8 -8"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "name": "afiliados",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Extensao Chrome Afiliados CVC: ofertas e comparativo de preco no Melhores Destinos",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check catalogo.js && node --check leitor.js && node --check coletor.js && node --check servico.js && node --check painel.js && node --test"
+  }
+}
