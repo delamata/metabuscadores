@@ -26,9 +26,23 @@ So **le o que o site ja mostrou**: nao faz requisicao nenhuma ao site.
 | quem o botao abre | regra do `motor-post-passagensaereas.js`: decolar > latam > cvc > viajanet > gol (padrao: decolar) |
 | trechos e precos | tabela que o site monta (`.ls-trechos-linha`, atributos `from`/`to`/`from_name`/`to_name`, preco em `.lt2`) a partir do `cheapest_prices_json` |
 
-**Limite: o post nao diz de qual vendedor e cada preco.** A tabela traz o
-menor preco de cada trecho, sem vendedor. Por isso o comparativo de preco
-CVC x Player **nao sai desta pagina** — o painel diz isso em vez de inventar.
+**O post nao diz de qual vendedor e cada preco** (a tabela traz o menor preco
+de cada trecho, sem vendedor). O preco de cada vendedor esta na pagina
+**"ver datas"** de um trecho (`/voos?rota=DE/PARA/chave`), que o addon tambem le:
+
+| dado | de onde vem |
+|---|---|
+| datas, preco e **vendedor** de cada uma | resposta de `/passagens_json/DE/PARA/?key=...` que a propria pagina pede (ao abrir e a cada mes clicado), copiada por `gancho.js` (mundo MAIN) — nenhuma requisicao nova |
+| posicao | a lista do site, que por padrao vem em ordem de preco |
+
+No painel do "ver datas": **preco da CVC**, **lugar da CVC em preco** entre os
+vendedores, **1a oferta da CVC na lista**, datas de cada vendedor (a CVC em
+quantas), **comparativo** CVC x cada Player `(CVC - player) / player`, os
+meses do trecho e a lista de datas. Cada mes clicado no site soma na leitura.
+De volta ao post, o cartao "CVC neste post" mostra o preco da CVC em cada
+trecho ja aberto. Excel: **"Excel dos posts"** (uma linha por trecho do post)
+e **"Excel dos precos por vendedor"** (uma linha por data, com vendedor,
+posicao, cia e bagagem).
 
 Se voce filtrar a tabela no site (origem/destino), a leitura nao muda: vale a
 promocao inteira.
@@ -46,8 +60,9 @@ endereco.
 | arquivo | papel |
 |---|---|
 | `catalogo.js` | agencias, numero do Player, dominios, cores e a mascara de nomes |
-| `leitor.js` | le o post: dados da promocao, vendedores do buscador, trechos; resumo por destino/origem |
-| `coletor.js` | content script so em `/promocao/*`: le ao abrir e quando a tabela carrega; grava estado e historico |
+| `gancho.js` | mundo MAIN, so no "ver datas": copia a resposta de `/passagens_json/` para o coletor |
+| `leitor.js` | le o post (promocao, buscador, trechos) e o "ver datas" (preco e vendedor de cada data, posicao, comparativo) |
+| `coletor.js` | content script em `/promocao/*` e `/voos`: le, grava estado e historico |
 | `painel.html`/`painel.js` | painel lateral (tema claro e escuro) |
 | `servico.js` | abre o painel pelo icone; selo "AF" nas abas do Melhores Destinos |
 | `icones/` | identidade CVC com etiqueta de oferta (diferente do Metabuscadores) |

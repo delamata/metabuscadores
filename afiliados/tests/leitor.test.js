@@ -69,3 +69,62 @@ test("catalogo: so a CVC com nome real", () => {
   for (const a of CAT.TODAS) if (a.id !== "cvc") assert.match(a.rotulo, /^Player \d+$/);
   assert.equal(CAT.mascara("Voos da Latam e Gol"), "Voos da Player 11 e Player 10");
 });
+
+// resposta de /passagens_json/ no formato do HAR de BHZ -> TPA (30/10/2026), encurtada
+const URL_VOOS = "https://www.melhoresdestinos.com.br/voos?rota=BHZ/TPA/i7does91p5u4qlvk&slug_post=parques-da-florida-voos-orlando-tampa-2341__644987";
+const data = (ida, preco, nome, link, cia = "G3") => ({ departure: ida, departure_txt: "Quarta", arrival: "2/3", arrival_txt: "Terça", stay: 13,
+  price: preco, airline_code: cia, link, provider_name: nome, website_display: `no site da ${nome}`, luggage_type: "carry_on_luggage_only" });
+const JSON_VOOS = {
+  itinerary_price_type: "RoundtripItineraryPrice", from_city_name: "Belo Horizonte", to_city_name: "Tampa",
+  publication_url: "https://www.melhoresdestinos.com.br/promocao/parques-da-florida-voos-orlando-tampa-2341",
+  search_engine_configuration: { providers: ["viajanet", "latam", "decolar", "gol", "cvc"] },
+  months: [
+    { month: "Jan", year: 2027, price: 3600, cheapest: false },
+    { month: "Fev", year: 2027, price: 3218, cheapest: true, dates: [
+      data("18/2", 3219, "Decolar", "https://www.decolar.com/x"),
+      data("17/2", 3218, "CVC", "https://cvc.com.br/passagens/v2/search/CNF/TPA"),
+      data("19/2", 3218, "Decolar", "https://www.decolar.com/y"),
+      data("20/2", 3500, "Agencia Nova", "https://www.cvc.com.br/z", "LA"),       // nome desconhecido, dominio da CVC
+      data("21/2", 3900, "Outra", "https://outra.com/z", "CM"),
+    ] },
+  ],
+};
+
+test("ver datas: so a pagina de um trecho", () => {
+  assert.equal(L.ehVoos(URL_VOOS), true);
+  assert.equal(L.ehVoos("https://www.melhoresdestinos.com.br/voos"), false);
+  assert.equal(L.ehVoos("https://www.melhoresdestinos.com.br/promocao/x"), false);
+});
+
+test("ver datas: vendedor de cada preco, mascarado", () => {
+  const l = L.lerVoos(JSON_VOOS, URL_VOOS);
+  assert.equal(l.de, "BHZ"); assert.equal(l.para, "TPA"); assert.equal(l.slug, "parques-da-florida-voos-orlando-tampa-2341");
+  assert.equal(l.datas.length, 5);
+  assert.deepEqual(l.datas.map((d) => d.vendedor.rotulo), ["Player 1", "CVC", "Player 1", "CVC", "Player ?"]);
+  assert.deepEqual(l.datas.map((d) => d.cia), ["Player 10", "Player 10", "Player 10", "Player 11", "CM"]);
+  assert.deepEqual(l.desconhecidos, ["Outra"]);
+  assert.equal(l.datas[0].mes, "2027-02");
+  assert.deepEqual(l.meses.map((m) => m.mes), ["2027-01", "2027-02"]);
+  assert.ok(!JSON.stringify(l.datas).match(/decolar/i));
+});
+
+test("ver datas: preco da CVC, posicao e comparativo", () => {
+  const r = L.resumoVoos(L.lerVoos(JSON_VOOS, URL_VOOS));
+  assert.equal(r.menor, 3218);
+  assert.equal(r.cvc_menor, 3218);
+  assert.equal(r.cvc_lugar_preco, 1);           // 1a entre os vendedores
+  assert.equal(r.cvc_posicao_lista, 1);         // empate de preco: vale a ordem do site
+  assert.equal(r.cvc_datas, 2);
+  const p1 = r.comparativo.find((c) => c.id === "p1");
+  assert.equal(p1.menor, 3218); assert.equal(p1.dif, 0);
+  assert.equal(r.vendedores, 3);
+});
+
+test("ver datas: cada mes clicado soma; o mesmo mes substitui", () => {
+  const fev = L.lerVoos(JSON_VOOS, URL_VOOS);
+  const jan = L.lerVoos({ ...JSON_VOOS, months: [{ month: "Jan", year: 2027, price: 3600, dates: [data("5/1", 3600, "CVC", "")] }] }, URL_VOOS);
+  const junto = L.juntaVoos(fev, jan);
+  assert.equal(junto.datas.length, 6);
+  assert.equal(L.juntaVoos(junto, fev).datas.length, 6);
+  assert.equal(L.juntaVoos(junto, L.lerVoos(JSON_VOOS, URL_VOOS.replace("BHZ", "SAO"))).datas.length, 5);   // outra pagina
+});

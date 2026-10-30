@@ -2,25 +2,60 @@
   "manifest_version": 3,
   "name": "Afiliados CVC",
   "version": "0.2.0",
-  "description": "Le os posts de promocao do Melhores Destinos: trechos e precos, e se a CVC esta no buscador do post (concorrentes como Player N). So le o que o site mostra.",
+  "description": "Le os posts de promocao do Melhores Destinos e a pagina ver datas de cada trecho: precos, posicao e comparativo da CVC com os concorrentes (Player N). So le o que o site mostra.",
   "icons": {
     "16": "icones/icone16.png",
     "32": "icones/icone32.png",
     "48": "icones/icone48.png",
     "128": "icones/icone128.png"
   },
-  "permissions": ["sidePanel", "storage", "unlimitedStorage"],
-  "host_permissions": ["https://www.melhoresdestinos.com.br/*", "https://melhoresdestinos.com.br/*"],
-  "background": { "service_worker": "servico.js" },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://www.melhoresdestinos.com.br/*",
+    "https://melhoresdestinos.com.br/*"
+  ],
+  "background": {
+    "service_worker": "servico.js"
+  },
   "action": {
     "default_title": "Afiliados CVC — abre o painel",
-    "default_icon": { "16": "icones/icone16.png", "32": "icones/icone32.png", "48": "icones/icone48.png" }
+    "default_icon": {
+      "16": "icones/icone16.png",
+      "32": "icones/icone32.png",
+      "48": "icones/icone48.png"
+    }
   },
-  "side_panel": { "default_path": "painel.html" },
+  "side_panel": {
+    "default_path": "painel.html"
+  },
   "content_scripts": [
     {
-      "matches": ["https://www.melhoresdestinos.com.br/promocao/*", "https://melhoresdestinos.com.br/promocao/*"],
-      "js": ["catalogo.js", "leitor.js", "coletor.js"],
+      "matches": [
+        "https://www.melhoresdestinos.com.br/voos*",
+        "https://melhoresdestinos.com.br/voos*"
+      ],
+      "js": [
+        "gancho.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.melhoresdestinos.com.br/promocao/*",
+        "https://melhoresdestinos.com.br/promocao/*",
+        "https://www.melhoresdestinos.com.br/voos*",
+        "https://melhoresdestinos.com.br/voos*"
+      ],
+      "js": [
+        "catalogo.js",
+        "leitor.js",
+        "coletor.js"
+      ],
       "run_at": "document_idle"
     }
   ]
