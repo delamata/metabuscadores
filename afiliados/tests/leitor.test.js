@@ -36,10 +36,14 @@ test("vendedores do buscador: CVC com nome, os demais como Player N", () => {
   assert.equal(v.cvc, true);
   assert.equal(v.primeiro.rotulo, "Player 1");          // o botao abre a Decolar (prioridade do site)
   assert.deepEqual(v.desconhecidos, []);
+  assert.equal(v.cvc_posicao, 5);                       // 5a de 5 na lista do buscador
+  assert.equal(v.cvc_vez_botao, 3);                     // 3a na escolha do botao
+  assert.deepEqual(v.antes_da_cvc, ["Player 1", "Player 11"]);
   const so = L.vendedores({ search_engine_configuration: { providers: ["gol", "cvc", "novaagencia"] } });
   assert.equal(so.primeiro.rotulo, "CVC");              // sem decolar/latam, a CVC vem antes
   assert.equal(so.lista[2].rotulo, "Player ?");
   assert.deepEqual(so.desconhecidos, ["novaagencia"]);
+  assert.equal(so.cvc_vez_botao, 1); assert.deepEqual(so.antes_da_cvc, []);
   assert.equal(L.vendedores(null).lista.length, 0);
 });
 

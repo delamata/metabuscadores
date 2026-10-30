@@ -7,7 +7,8 @@ mostra, no painel lateral:
 
 - **trechos com preco** da promocao e o **menor preco** (confere com o
   "a partir de" do titulo);
-- **CVC no buscador**: se a CVC esta entre os vendedores do buscador do post,
+- **CVC neste post**: posicao da CVC na lista do buscador (ex.: 5o de 5), a vez
+  dela no botao "Pesquisar" e o preco da CVC (o post nao informa); se a CVC esta entre os vendedores do buscador do post,
   quais concorrentes estao (como Player N) e **qual deles o botao "Pesquisar"
   abre** (prioridade fixa do site: Player 1 > Player 11 > CVC > Player 7 >
   Player 10);

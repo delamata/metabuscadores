@@ -11,26 +11,43 @@ function topo() {
   return `<div class="topo"><img src="icones/icone32.png" alt=""><b>Afiliados CVC</b><span class="chip">Melhores Destinos</span></div>`;
 }
 
+const ord = (n) => `${n}º`;
+
 function kpis(e) {
   const r = e.resumo, v = e.vendedores;
+  const cvc = v.cvc
+    ? `<div class="kpi cvc"><b>${ord(v.cvc_posicao)} de ${v.lista.length}</b><span>posição da CVC no buscador</span></div>`
+    : `<div class="kpi sem-cvc"><b>Fora</b><span>CVC não está no buscador</span></div>`;
   return `<div class="kpis">
     <div class="kpi"><b>${r.trechos}</b><span>trechos com preço</span></div>
-    <div class="kpi"><b>${brl(r.menor)}</b><span>menor preço</span></div>
-    <div class="kpi ${v.cvc ? "cvc" : "sem-cvc"}"><b>${v.cvc ? "Sim" : "Não"}</b><span>CVC no buscador</span></div>
+    <div class="kpi"><b>${brl(r.menor)}</b><span>menor preço do post</span></div>
+    ${cvc}
   </div>`;
 }
 
-// Vendedores do buscador do post: quem participa e quem o botao abre
+// A CVC no post: posicao na lista, vez no botao e o preco (que o post nao informa)
+function cartaoCvc(e) {
+  const v = e.vendedores;
+  if (!v.cvc) return "";
+  const vez = v.cvc_vez_botao == null ? "—"
+    : v.cvc_vez_botao === 1 ? "1º — o botão abre a CVC"
+    : `${ord(v.cvc_vez_botao)} — só abre a CVC se ${v.antes_da_cvc.join(" e ")} não estiverem no post`;
+  return `<h2>CVC neste post</h2><div class="cartao cvc-borda">
+    <div class="comp"><span class="suave">posição na lista do buscador</span><span></span><span class="valor">${ord(v.cvc_posicao)} de ${v.lista.length}</span></div>
+    <div class="comp"><span class="suave">vez no botão “Pesquisar”</span><span></span><span class="valor quebra">${esc(vez)}</span></div>
+    <div class="comp"><span class="suave">preço da CVC</span><span></span><span class="valor fraco">não informado no post</span></div>
+    <div class="fraco nota">O post só traz o menor preço de cada trecho, sem o vendedor — o preço da CVC não aparece nesta página.</div></div>`;
+}
+
+// Vendedores do buscador do post: quem participa (na ordem do post) e quem o botao abre
 function buscador(e) {
   const v = e.vendedores;
   if (!v.lista.length) {
     return `<h2>Buscador do post</h2><div class="cartao"><div class="fraco">Este post não traz a lista de vendedores do buscador.</div></div>`;
   }
-  const chips = v.lista.map((a) => `<div class="vend">${marca(a)}${a.primeiro ? '<span class="tag abre">o botão abre este</span>' : ""}</div>`).join("");
+  const chips = v.lista.map((a) => `<div class="vend"><span class="pos">${a.posicao}º</span>${marca(a)}${a.primeiro ? '<span class="tag abre">o botão abre este</span>' : ""}</div>`).join("");
   const semCvc = v.cvc ? "" : `<div class="aviso">A CVC não está entre os vendedores deste post.</div>`;
-  const cvcAtras = v.cvc && v.primeiro && v.primeiro.id !== "cvc"
-    ? `<div class="fraco nota">A CVC participa, mas o botão “Pesquisar” abre ${esc(v.primeiro.rotulo)} (prioridade do site).</div>` : "";
-  return `<h2>Buscador do post · ${v.lista.length} vendedor(es)</h2><div class="cartao">${chips}${semCvc}${cvcAtras}</div>`;
+  return `<h2>Buscador do post · ${v.lista.length} vendedor(es)</h2><div class="cartao">${chips}${semCvc}</div>`;
 }
 
 // O que da para comparar: o preco do titulo com a tabela, e por destino
@@ -46,15 +63,6 @@ function precos(e) {
     ? `<div class="fraco nota">Título do post: a partir de ${brl(e.preco_titulo)} · ${e.preco_titulo === r.menor ? "confere com a tabela" : `tabela hoje: ${brl(r.menor)}`}</div>` : "";
   return `<h2>Preço por destino</h2><div class="cartao">${destinos}
     <div class="comp"><span class="suave">Mediana dos ${r.com_preco} trechos</span><span></span><span class="valor">${brl(r.mediana)}</span></div>${titulo}</div>`;
-}
-
-// A pagina nao diz de qual vendedor e cada preco: o comparativo CVC x Player
-// nao sai daqui. Dizemos isso em vez de inventar.
-function comparativo(e) {
-  if (!e.resumo.trechos) return "";
-  return `<h2>Comparativo de preço</h2><div class="cartao"><div class="aviso" style="margin-top:0">
-    O post mostra o <b>menor preço de cada trecho</b>, sem dizer de qual vendedor ele é. Por isso o comparativo CVC × Player
-    não sai desta página — só a presença de cada um no buscador e os preços da promoção.</div></div>`;
 }
 
 function trechos(e) {
@@ -79,13 +87,14 @@ const num = (v) => (v == null ? "" : v.toFixed(2).replace(".", ","));
 const cel = (v) => { const s = v == null ? "" : String(v); return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 function csv(posts) {
   const cab = ["Data da leitura", "Hora", "Post", "Página", "Tipo", "Origem", "Cód. origem", "Destino", "Cód. destino", "Preço",
-               "CVC no buscador", "Vendedores no buscador", "Botão abre"];
+               "CVC no buscador", "Posição CVC no buscador", "Vez CVC no botão", "Preço CVC", "Vendedores no buscador", "Botão abre"];
   const linhas = [];
   for (const p of posts) {
     const d = new Date(p.quando);
     const data = d.toLocaleDateString("pt-BR"), hora = d.toLocaleTimeString("pt-BR");
     const v = p.vendedores;
-    const comum = [v.cvc ? "Sim" : "Não", v.lista.map((a) => a.rotulo).join(", "), v.primeiro ? v.primeiro.rotulo : ""];
+    const comum = [v.cvc ? "Sim" : "Não", v.cvc ? `${v.cvc_posicao} de ${v.lista.length}` : "", v.cvc_vez_botao || "",
+                   v.cvc ? "não informado no post" : "", v.lista.map((a) => a.rotulo).join(", "), v.primeiro ? v.primeiro.rotulo : ""];
     for (const t of p.trechos) {
       linhas.push([data, hora, p.titulo, p.url, p.tipo === "pacote" ? "Pacote" : "Passagem", t.origem, t.origem_cod,
                    t.destino, t.destino_cod, num(t.preco), ...comum].map(cel).join(";"));
@@ -131,7 +140,7 @@ function desenha(e) {
   const cab = `<div class="pagina">${esc(e.titulo)}</div>
     <div class="meta">Post de promoção · ${e.tipo === "pacote" ? "pacotes" : e.ida_e_volta === false ? "passagens só ida" : "passagens ida e volta"}
       · lido ${esc(quando.toLocaleDateString("pt-BR"))} ${esc(quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }))}</div>`;
-  app.innerHTML = topo() + cab + kpis(e) + buscador(e) + precos(e) + comparativo(e) + trechos(e) + cartaoHistorico() + diagnostico(e);
+  app.innerHTML = topo() + cab + kpis(e) + cartaoCvc(e) + buscador(e) + precos(e) + trechos(e) + cartaoHistorico() + diagnostico(e);
   if (aberto && app.querySelector("details")) app.querySelector("details").open = true;
   const b = (id) => document.getElementById(id);
   if (b("h-exp")) b("h-exp").onclick = exporta;

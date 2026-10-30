@@ -55,12 +55,20 @@ var LEITOR = (() => {
     const codigos = ((promo && promo.search_engine_configuration && promo.search_engine_configuration.providers) || [])
       .map((c) => String(c).toLowerCase());
     const primeiro = codigos.length ? abrePrimeiro(codigos) : null;
-    const lista = codigos.map((codigo) => {
+    // vez no botao: a ordem da PRIORIDADE entre os que estao no post (fora dela: sem vez)
+    const naFila = PRIORIDADE.filter((c) => codigos.includes(c));
+    const lista = codigos.map((codigo, i) => {
       const a = C.noTexto(codigo)[0];
+      const vez = naFila.indexOf(codigo);
       return Object.assign(a ? resumoAg(a) : { id: `?${codigo}`, rotulo: "Player ?", cor: null },
-                           { codigo, primeiro: codigo === primeiro });
+                           { codigo, primeiro: codigo === primeiro, posicao: i + 1, vez_botao: vez < 0 ? null : vez + 1 });
     });
-    return { lista, primeiro: lista.find((v) => v.primeiro) || null, cvc: lista.some((v) => v.id === "cvc"),
+    const cvc = lista.find((v) => v.id === "cvc") || null;
+    return { lista, primeiro: lista.find((v) => v.primeiro) || null, cvc: !!cvc,
+             cvc_posicao: cvc ? cvc.posicao : null, cvc_vez_botao: cvc ? cvc.vez_botao : null,
+             // quem o botao escolheria antes da CVC
+             antes_da_cvc: cvc && cvc.vez_botao ? lista.filter((v) => v.vez_botao && v.vez_botao < cvc.vez_botao)
+               .sort((a, b) => a.vez_botao - b.vez_botao).map((v) => v.rotulo) : [],
              desconhecidos: lista.filter((v) => v.id.startsWith("?")).map((v) => v.codigo) };
   }
 
